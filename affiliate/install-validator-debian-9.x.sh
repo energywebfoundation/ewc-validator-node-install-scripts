@@ -73,7 +73,7 @@ whiptail --backtitle="EWF Genesis Node Installer" --title "Confirm Home Director
 
 COMPANY_NAME=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Affiliate/Company Name (will be cut to 30 chars)" 8 78 $COMPANY_NAME --title "Node Configuration" 3>&1 1>&2 2>&3)
 KEY_SEED=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Validator account seed (32byte hex with 0x)" 8 78 $KEY_SEED --title "Node Configuration" 3>&1 1>&2 2>&3)
-EXTERNAL_IP=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts private IP" 8 78 $EXTERNAL_IP --title "Connectivity" 3>&1 1>&2 2>&3)
+EXTERNAL_IP=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts public IP" 8 78 $EXTERNAL_IP --title "Connectivity" 3>&1 1>&2 2>&3)
 NETIF=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts primary network interface" 8 78 $NETIF --title "Connectivity" 3>&1 1>&2 2>&3)
 fi
 
