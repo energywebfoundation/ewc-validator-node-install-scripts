@@ -16,7 +16,7 @@ TELEGRAF_VERSION="1.9.4"
 TELEGRAF_CHKSUM="d2403d2c31806470d321c67443684549d4926badbb6cc4f0f64f9f4d997f3eec  telegraf-1.9.4-1.x86_64.rpm"
 
 # Chain/PArity configuration
-BLOCK_GAS="4000000"
+BLOCK_GAS="8000000"
 CHAINNNAME="Volta"
 CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/Volta.json"
 
