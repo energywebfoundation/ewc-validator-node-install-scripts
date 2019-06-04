@@ -8,8 +8,6 @@ DEBIAN_FRONTEND=noninteractive
 # Configuration Block - Docker checksums are the image Id
 PARITY_VERSION="parity/parity:v2.4.6"
 PARITY_CHKSUM="sha256:952161b0410746ee6500b21e83a8cf422c24f1d86f031e3e7a48c5b501e70638"
-SIGNER_VERSION="v0.9.7"
-SIGNER_CHKSUM="sha256:d54903ed7554c9ab8e5f3a8a3aaaeeaf2ba466792c5b880d9b2b34634a878872"
 
 NODECONTROL_VERSION="v0.9.18"
 NODECONTROL_CHKSUM="sha256:bed30ea4acf7cee6ed4db5932f55de47cc440f7bff4943b471f2e8b01e5fbdf8"
@@ -21,21 +19,11 @@ TELEGRAF_CHKSUM="5e52c05988c17d652dbbdfc7a501be69490b6c935b66ccc1ea0aceaca7b4815
 BLOCK_GAS="8000000"
 CHAINNNAME="Volta"
 CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/Volta.json"
-
-# First channel telemetry
-INGRESS_IP="https://99.81.248.97"
-INGRESS_FP="B7:07:D9:65:77:12:87:2E:27:FC:0C:B6:54:C5:10:49:09:C8:FE:FB:B3:FF:FA:01:19:91:FC:EA:CA:7A:60:23"
-
-# Second channel telemetry
-SC_IP="108.128.23.56"
-SC_FP="c5:69:44:ee:ab:6d:42:4d:78:9e:cd:62:4d:3d:52:84"
-
 KEY_SEED="0x$(openssl rand -hex 32)"
 
+# Make sure locales are properly set and generated
 apt-get update -y
 apt-get install locales -y
-
-# Make sure locales are properly set and generated
 echo "Setup locales"
 cat > /etc/locale.gen << EOF
 de_DE.UTF-8 UTF-8
@@ -62,16 +50,15 @@ apt-get install -y curl net-tools dnsutils expect jq iptables-persistent debsums
 # Get external IP from OpenDNS
 EXTERNAL_IP="$(dig @resolver1.opendns.com ANY myip.opendns.com +short)"
 COMPANY_NAME="validator-$EXTERNAL_IP"
-SC_PW="$(openssl rand -hex 16)"
 
 if [ ! "$1" == "--auto" ];
 then
 # Show a warning that SSH login is restriced after install finishes
 whiptail --backtitle="EWF Genesis Node Installer" --title "Warning" --yes-button "Continue" --no-button "Abort" --yesno "After the installation is finished you can only login through SSH with the current user on port 2222 and the key provided in the next steps." 10 60
-
+HOMEDIR=$(pwd)
 # Confirm user home directory
 whiptail --backtitle="EWF Genesis Node Installer" --title "Confirm Home Directory" --yesno "Is $(pwd) the normal users home directory?" 8 60
-HOMEDIR=$(pwd)
+
 COMPANY_NAME=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Affiliate/Company Name (will be cut to 30 chars)" 8 78 $COMPANY_NAME --title "Node Configuration" 3>&1 1>&2 2>&3)
 KEY_SEED=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Validator account seed (32byte hex with 0x)" 8 78 $KEY_SEED --title "Node Configuration" 3>&1 1>&2 2>&3)
 EXTERNAL_IP=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts public IP" 8 78 $EXTERNAL_IP --title "Connectivity" 3>&1 1>&2 2>&3)
@@ -127,10 +114,6 @@ fi
 
 dpkg -i telegraf_$TELEGRAF_VERSION-1_amd64.deb
 rm telegraf_$TELEGRAF_VERSION-1_amd64.deb
-
-mkfifo /var/spool/influxdb.sock
-chown telegraf /var/spool/influxdb.sock
-
 usermod -aG docker telegraf
 
 # Stop telegraf as it won't be able to write telemetry until the signer is running.
@@ -138,9 +121,6 @@ service telegraf stop
 
 # Prepare and pull docker images and verify their checksums
 echo "Prepare Docker..."
-
-# TODO: replace with public repo
-echo "Login to EWF Repository"
 
 mkdir -p ~/.docker
 cat > ~/.docker/config.json << EOF
@@ -159,13 +139,6 @@ if [ "$PARITY_CHKSUM" != "$IMGHASH" ]; then
   exit -1;
 fi
 
-docker pull energyweb/telemetry-signer:$SIGNER_VERSION
-IMGHASH="$(docker image inspect energyweb/telemetry-signer:$SIGNER_VERSION|jq -r '.[0].Id')"
-if [ "$SIGNER_CHKSUM" != "$IMGHASH" ]; then
-  echo "ERROR: Unable to verify telemetry signer docker image. Checksum missmatch."
-  exit -1;
-fi
-
 docker pull energyweb/nodecontrol:$NODECONTROL_VERSION
 IMGHASH="$(docker image inspect energyweb/nodecontrol:$NODECONTROL_VERSION|jq -r '.[0].Id')"
 if [ "$NODECONTROL_CHKSUM" != "$IMGHASH" ]; then
@@ -178,7 +151,6 @@ mkdir docker-stack
 cd docker-stack
 mkdir config
 mkdir chain-data
-mkdir signer-data
 
 touch config/peers
 
@@ -224,7 +196,8 @@ EOF
 ADDR=`curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data "$(generate_account_data)" | jq -r '.result'`
 
 echo "Account created: $ADDR"
-SC_USER="$(echo $ADDR | cut -c -20)"
+INFLUX_USER="$(echo $ADDR | cut -c -20)"
+INFLUX_PASS="$(openssl rand -hex 16)"
 
 # got the key now discard of the parity instance
 docker stop parity-keygen
@@ -240,14 +213,6 @@ EOF
 
 # Write the docker-compose file to disk
 writeDockerCompose
-
-# generate telemetry signer key
-echo "Generating Telemetry Signer keypair..."
-SIGNER_PUBKEY="$(docker run --rm \
- -v $XPATH/signer-data:/signer \
- -e TELEMETRY_INTERNAL_DIR=/signer \
- -e TELEMETRY_NODE_ID=${ADDR} \
- energyweb/telemetry-signer:${SIGNER_VERSION} --genkeys | tail -n1)"
 
 # start everything up
 docker-compose up -d
@@ -306,10 +271,8 @@ echo "Company: $COMPANY_NAME" >> install-summary.txt
 echo "Validator Address: $ADDR" >> install-summary.txt
 echo "Enode: $ENODE" >> install-summary.txt
 echo "IP Address: $EXTERNAL_IP" >> install-summary.txt
-echo "Telemetry Public Key: $SIGNER_PUBKEY" >> install-summary.txt
-
-echo "Telemetry Second Channel Username: $SC_USER" >> install-summary.txt
-echo "Telemetry Second Channel Password: $SC_PW" >> install-summary.txt
+echo "InfluxDB Username: $INFLUX_USER" >> install-summary.txt
+echo "InfluxDB Password: $INFLUX_PASS" >> install-summary.txt
 cat install-summary.txt
 
 
@@ -349,49 +312,17 @@ services:
       - STACK_PATH=$PWD
       - RPC_ENDPOINT=http://parity:8545
       - VALIDATOR_ADDRESS=${VALIDATOR_ADDRESS}
-
-  signer:
-    image: energyweb/telemetry-signer:${SIGNER_VERSION}
-    restart: always
-    environment:
-        - INFLUX_SOCKET=/influxdb.sock
-        - TELEMETRY_INGRESS_HOST=${TELEMETRY_INGRESS_HOST}
-        - TELEMETRY_INGRESS_FINGERPRINT=${TELEMETRY_INGRESS_FINGERPRINT}
-        - TELEMETRY_NODE_ID=${VALIDATOR_ADDRESS}
-        - TELEMETRY_INTERNAL_DIR=/signer
-        - RPC_ENDPOINT=http://parity:8545
-        - PARITY_WEB_SOCKET=ws://parity:8546
-        - SFTP_HOST=$SFTP_HOST
-        - SFTP_PORT=$SFTP_PORT
-        - SFTP_USER=$SFTP_USER
-        - SFTP_PASS=$SFTP_PASS
-        - SFTP_FINGER_PRINT=$SFTP_FINGER_PRINT
-        - FTP_DIR=$FTP_DIR
-    volumes:
-        - /var/spool/influxdb.sock:/influxdb.sock
-        - ./signer-data:/signer
-volumes:
-  signer-internal:
 EOF
 
 cat > .env << EOF
 VALIDATOR_ADDRESS=$ADDR
-TELEMETRY_INGRESS_HOST=$INGRESS_IP
-TELEMETRY_INGRESS_FINGERPRINT=$INGRESS_FP
 NODECONTROL_VERSION=$NODECONTROL_VERSION
 EXTERNAL_IP=$EXTERNAL_IP
-SIGNER_VERSION=$SIGNER_VERSION
 PARITY_VERSION=$PARITY_VERSION
 IS_SIGNING=signing
 CHAINSPEC_CHKSUM=$CHAINSPEC_CHKSUM
 CHAINSPEC_URL=https://example.com
 PARITY_CHKSUM=$PARITY_CHKSUM
-SFTP_HOST=$SC_IP
-SFTP_FINGER_PRINT=$SC_FP
-SFTP_PORT=55
-SFTP_USER=$SC_USER
-SFTP_PASS=$SC_PW
-FTP_DIR=/upload
 EOF
 }
 
@@ -436,9 +367,12 @@ cat > /etc/telegraf/telegraf.conf << EOF
   logfile = ""
   hostname = "$HOSTNAME"
   omit_hostname = false
-[[outputs.file]]
-  files = ["/var/spool/influxdb.sock"]
-  data_format = "influx"
+[[outputs.influxdb]]
+  urls = ["https://delorean-72139296.influxcloud.net:8086"]
+  database = "telemetry_$CHAINNAMELOWER"
+  skip_database_creation = true
+  username = "$INFLUX_USER"
+  password = "$INFLUX_PASS"
 [[inputs.cpu]]
   percpu = true
   totalcpu = true
