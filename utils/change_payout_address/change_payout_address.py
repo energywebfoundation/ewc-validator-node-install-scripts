@@ -1,4 +1,4 @@
-from web3.auto import w3
+import web3
 import argparse
 import os
 import json
@@ -17,6 +17,9 @@ parser.add_argument('--secret', help="Path of the encryption key", default=SECRE
 parser.add_argument('--payoutAddress', help="Payout address", required=True)
 parser.add_argument('--chain', help="Chain ID in hex format", default=CHAIN_ID)
 args = parser.parse_args()
+
+my_provider = Web3.HttpProvider('http://localhost:8545')
+w3 = Web3(my_provider)
 
 # init contract
 reward_contract = w3.eth.contract(address=REWARD_CONTRACT, abi=REWARD_ABI)
