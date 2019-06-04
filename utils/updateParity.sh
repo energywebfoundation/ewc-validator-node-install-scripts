@@ -39,8 +39,8 @@ if [[ "$#" -eq 3 ]]; then
   			echo "ERROR: Unable to verify parity docker image. Checksum missmatch."
   			exit 1;
 		fi
-			docker-compose up -d
-			echo "Updated Parity to $PARITY_VERSION"
+		docker-compose up -d
+		echo "Updated Parity to $PARITY_VERSION"
 	else
 		echo "Wrong folder: cd /home/admin/docker-stack if your login user is admin"
 		exit 1
