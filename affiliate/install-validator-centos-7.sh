@@ -401,7 +401,7 @@ cat > /etc/telegraf/telegraf.conf << EOF
     endpoint = "unix:///var/run/docker.sock"
 [[inputs.net]]
 [[inputs.tail]]
-   files = ["/tmp/parity.pipe"]
+   files = ["/var/spool/parity.sock"]
    pipe = true
    data_format = "json"
 
