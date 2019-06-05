@@ -12,6 +12,9 @@ PARITY_CHKSUM="sha256:952161b0410746ee6500b21e83a8cf422c24f1d86f031e3e7a48c5b501
 NODECONTROL_VERSION="v0.9.18"
 NODECONTROL_CHKSUM="sha256:bed30ea4acf7cee6ed4db5932f55de47cc440f7bff4943b471f2e8b01e5fbdf8"
 
+PARITYTELEMETRY_VERSION="v1.0.0"
+PARITYTELEMETRY_CHKSUM="sha256:"
+
 TELEGRAF_VERSION="1.9.4"
 TELEGRAF_CHKSUM="5e52c05988c17d652dbbdfc7a501be69490b6c935b66ccc1ea0aceaca7b48159  telegraf_1.9.4-1_amd64.deb"
 
@@ -146,6 +149,13 @@ if [ "$NODECONTROL_CHKSUM" != "$IMGHASH" ]; then
   exit -1;
 fi
 
+docker pull energyweb/parity-telemetry:$PARITYTELEMETRY_VERSION
+IMGHASH="$(docker image inspect energyweb/parity-telemetry:$PARITYTELEMETRY_VERSION|jq -r '.[0].Id')"
+if [ "$PARITYTELEMETRY_CHKSUM" != "$IMGHASH" ]; then
+  echo "ERROR: Unable to verify parity-telemetry docker image. Checksum missmatch."
+  exit -1;
+fi
+
 # Create the directory structure
 mkdir docker-stack
 cd docker-stack
@@ -210,6 +220,10 @@ engine_signer = "$ADDR"
 password = ["/parity/authority.pwd"]
 keys_iterations = 10240
 EOF
+
+# Prepare parity telemetry pipe
+mkfifo /var/spool/parity.sock
+chown telegraf /var/spool/parity.sock
 
 # Write the docker-compose file to disk
 writeDockerCompose
@@ -312,6 +326,16 @@ services:
       - STACK_PATH=$PWD
       - RPC_ENDPOINT=http://parity:8545
       - VALIDATOR_ADDRESS=${VALIDATOR_ADDRESS}
+
+  parity-telemetry:
+    image: energyweb/parity-telemetry:${PARITYTELEMETRY_VERSION}
+    restart: always
+    environment:
+      - WSURL=ws://parity:8546
+      - HTTPURL=http://parity:8545
+      - PIPENAME=/var/spool/parity.sock
+    volumes:
+      - /var/spool/parity.sock:/var/spool/parity.sock
 EOF
 
 cat > .env << EOF
