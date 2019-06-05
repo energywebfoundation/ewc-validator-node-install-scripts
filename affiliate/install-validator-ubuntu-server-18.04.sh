@@ -389,6 +389,16 @@ cat > /etc/telegraf/telegraf.conf << EOF
     tag_env = []
     endpoint = "unix:///var/run/docker.sock"
 [[inputs.net]]
+[[inputs.tail]]
+   files = ["/tmp/parity.pipe"]
+   pipe = true
+   data_format = "json"
+
+   tag_keys = []
+   json_time_key = "blockReceived"
+   json_time_format = "unix_ms"
+   json_string_fields = ["client","blockHash"]
+   name_override = "parity"
 EOF
 }
 
