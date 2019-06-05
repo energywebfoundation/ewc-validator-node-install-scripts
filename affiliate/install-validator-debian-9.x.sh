@@ -368,7 +368,7 @@ cat > /etc/telegraf/telegraf.conf << EOF
   hostname = "$HOSTNAME"
   omit_hostname = false
 [[outputs.influxdb]]
-  urls = ["https://delorean-72139296.influxcloud.net:8086"]
+  urls = ["https://$CHAINNAMELOWER-influx-ingress.energyweb.org/"]
   database = "telemetry_$CHAINNAMELOWER"
   skip_database_creation = true
   username = "$INFLUX_USER"
