@@ -203,6 +203,8 @@ INFLUX_PASS="$(openssl rand -hex 16)"
 docker stop parity-keygen
 docker rm -f parity-keygen
 
+PARITY_KEY_FILE="$(ls -1 ./chain-data/keys/$CHAINNNAME/|grep UTC|head -n1)"
+
 cat >> config/parity-signing.toml << EOF
 engine_signer = "$ADDR"
 
@@ -214,7 +216,8 @@ EOF
 # Prepare parity telemetry pipe
 mkfifo /var/spool/parity.sock
 chown telegraf /var/spool/parity.sock
-
+# touch the blockfile to avoid docker creating a dir
+touch config/nc-lastblock.txt
 # Write the docker-compose file to disk
 writeDockerCompose
 
@@ -307,11 +310,15 @@ services:
     volumes:
       - $PWD:$PWD
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/nc-lastblock.txt:/lastblock.txt
+      - $PARITY_KEY_FILE:/paritykey:ro
     environment:
       - CONTRACT_ADDRESS=0x1204700000000000000000000000000000000007
       - STACK_PATH=$PWD
       - RPC_ENDPOINT=http://parity:8545
       - VALIDATOR_ADDRESS=${VALIDATOR_ADDRESS}
+      - BLOCKFILE_PATH=/lastblock.txt
+      - KEYFILE_PATH=/paritykey
 
   parity-telemetry:
     image: energyweb/parity-telemetry:${PARITYTELEMETRY_VERSION}
@@ -331,6 +338,7 @@ EXTERNAL_IP=$EXTERNAL_IP
 PARITY_VERSION=$PARITY_VERSION
 PARITYTELEMETRY_VERSION=$PARITYTELEMETRY_VERSION
 IS_SIGNING=signing
+PARITY_KEY_FILE=./chain-data/keys/${CHAINNNAME}/${PARITY_KEY_FILE}
 CHAINSPEC_CHKSUM=$CHAINSPEC_CHKSUM
 CHAINSPEC_URL=https://example.com
 PARITY_CHKSUM=$PARITY_CHKSUM
