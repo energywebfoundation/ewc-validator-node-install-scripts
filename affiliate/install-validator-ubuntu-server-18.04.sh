@@ -226,7 +226,8 @@ EOF
 # Prepare parity telemetry pipe
 mkfifo /var/spool/parity.sock
 chown telegraf /var/spool/parity.sock
-
+# touch the blockfile to avoid docker creating a dir
+touch config/nc-lastblock.txt
 # Write the docker-compose file to disk
 writeDockerCompose
 
