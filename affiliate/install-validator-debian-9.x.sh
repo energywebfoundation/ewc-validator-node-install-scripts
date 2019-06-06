@@ -190,7 +190,7 @@ docker run -d --name parity-keygen \
     -p 127.0.0.1:8545:8545 \
     -v ${XPATH}/chain-data/:/home/parity/.local/share/io.parity.ethereum/ \
     -v ${XPATH}/config:/parity/config:ro ${PARITY_VERSION} \
-    --config /parity/config/parity-non-signing.toml
+    --config /parity/config/parity-non-signing.toml --jsonrpc-apis=parity_accounts
 
 # Wait for parity to sort itself out
 sleep 20
@@ -465,7 +465,7 @@ disable = false
 port = 8545
 interface = "0.0.0.0"
 cors = []
-apis = ["eth", "net", "parity", "web3","parity_accounts"]
+apis = ["eth", "net", "parity", "web3"]
 
 [websockets]
 disable = false
