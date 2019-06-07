@@ -38,7 +38,7 @@ source /etc/default/locale
 
 # Try to guess the current primary network interface
 NETIF="$(ip route | grep default | awk '{print $5}')"
-
+CHAINNAMELOWER="$(echo $CHAINNNAME | awk '{print tolower($0)}')"
 # Install system updates and required tools and dependencies
 echo "Installing dependencies"
 

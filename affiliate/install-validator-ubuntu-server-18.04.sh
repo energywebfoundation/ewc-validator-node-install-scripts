@@ -21,7 +21,7 @@ TELEGRAF_CHKSUM="5e52c05988c17d652dbbdfc7a501be69490b6c935b66ccc1ea0aceaca7b4815
 # Chain/PArity configuration
 BLOCK_GAS="8000000"
 CHAINNNAME="Volta"
-CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/Volta.json"
+CHAINNAMELOWER="$(echo $CHAINNNAME | awk '{print tolower($0)}')"
 KEY_SEED="0x$(openssl rand -hex 32)"
 
 # Make sure locales are properly set and generated
