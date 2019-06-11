@@ -158,6 +158,7 @@ fi
 
 # Create the directory structure
 mkdir docker-stack
+chmod 750 docker-stack
 cd docker-stack
 mkdir config
 mkdir chain-data
@@ -243,11 +244,6 @@ ENODE=`curl -s --request POST --url http://localhost:8545/ --header 'content-typ
 writeTelegrafConfig
 service telegraf restart
 
-
-# Install chkrootkit as cron
-echo "0 3 * * * (/usr/sbin/chkrootkit 2>&1 > /var/log/last-chkrk.log" >> curcron
-crontab curcron
-chkrootkit -q
 
 echo "Setting up firewall"
 
@@ -357,6 +353,10 @@ CHAINSPEC_CHKSUM=$CHAINSPEC_CHKSUM
 CHAINSPEC_URL=https://example.com
 PARITY_CHKSUM=$PARITY_CHKSUM
 EOF
+
+chmod 640 .env
+chmod 640 docker-compose.yml
+
 }
 
 writeSShConfig() {
@@ -504,6 +504,7 @@ gas_floor_target = "$BLOCK_GAS"
 tx_gas_limit = "$BLOCK_GAS"
 extra_data = "$COMPANY_NAME"
 EOF
+chmod 640 config/parity.toml
 }
 
 main

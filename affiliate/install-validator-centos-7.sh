@@ -148,6 +148,7 @@ fi
 
 # Create the directory structure
 mkdir docker-stack
+chmod 750 docker-stack
 cd docker-stack
 mkdir config
 mkdir chain-data
@@ -343,6 +344,10 @@ CHAINSPEC_CHKSUM=$CHAINSPEC_CHKSUM
 CHAINSPEC_URL=https://example.com
 PARITY_CHKSUM=$PARITY_CHKSUM
 EOF
+
+chmod 640 .env
+chmod 640 docker-compose.yml
+
 }
 
 writeSShConfig() {
@@ -491,6 +496,7 @@ gas_floor_target = "$BLOCK_GAS"
 tx_gas_limit = "$BLOCK_GAS"
 extra_data = "$COMPANY_NAME"
 EOF
+chmod 640 config/parity.toml
 }
 
 main
