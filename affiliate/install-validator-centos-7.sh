@@ -7,11 +7,13 @@ set -o errexit
 # Configuration Block - Docker checksums are the image Id
 PARITY_VERSION="parity/parity:v2.4.6"
 PARITY_CHKSUM="sha256:952161b0410746ee6500b21e83a8cf422c24f1d86f031e3e7a48c5b501e70638"
-SIGNER_VERSION="v0.9.7"
-SIGNER_CHKSUM="sha256:d54903ed7554c9ab8e5f3a8a3aaaeeaf2ba466792c5b880d9b2b34634a878872"
 
-NODECONTROL_VERSION="v0.9.18"
-NODECONTROL_CHKSUM="sha256:bed30ea4acf7cee6ed4db5932f55de47cc440f7bff4943b471f2e8b01e5fbdf8"
+NODECONTROL_VERSION="v1.0.0"
+NODECONTROL_CHKSUM="sha256:c23d3f66f1c7861c43ba1fe900eb734bcab7e2352f34b51db91beb6f3d757c35"
+
+PARITYTELEMETRY_VERSION="1.0.0"
+PARITYTELEMETRY_CHKSUM="sha256:3ab9490238fb50afba9dbbc4b5727bcc6a7fccde4b7b19805c18754eddc70bbe"
+
 TELEGRAF_VERSION="1.9.4"
 TELEGRAF_CHKSUM="d2403d2c31806470d321c67443684549d4926badbb6cc4f0f64f9f4d997f3eec  telegraf-1.9.4-1.x86_64.rpm"
 
@@ -20,18 +22,11 @@ BLOCK_GAS="8000000"
 CHAINNNAME="Volta"
 CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/Volta.json"
 
-# First channel telemetry
-INGRESS_IP="https://99.81.248.97"
-INGRESS_FP="B7:07:D9:65:77:12:87:2E:27:FC:0C:B6:54:C5:10:49:09:C8:FE:FB:B3:FF:FA:01:19:91:FC:EA:CA:7A:60:23"
-
-# Second channel telemetry
-SC_IP="108.128.23.56"
-SC_FP="c5:69:44:ee:ab:6d:42:4d:78:9e:cd:62:4d:3d:52:84"
 
 KEY_SEED="0x$(openssl rand -hex 32)"
-
 # Try to guess the current primary network interface
 NETIF="$(ip route | grep default | awk '{print $5}')"
+CHAINNAMELOWER="$(echo $CHAINNNAME | awk '{print tolower($0)}')"
 
 # Install system updates and required tools and dependencies
 echo "Installing updates"
@@ -47,7 +42,6 @@ yum -y install iptables-services jq curl expect wget bind-utils policycoreutils-
 # Get external IP from OpenDNS
 EXTERNAL_IP="$(dig @resolver1.opendns.com ANY myip.opendns.com +short)"
 COMPANY_NAME="validator-$EXTERNAL_IP"
-SC_PW="$(openssl rand -hex 16)"
 
 if [ ! "$1" == "--auto" ];
 then
@@ -114,10 +108,6 @@ fi
 
 yum -y localinstall telegraf-$TELEGRAF_VERSION-1.x86_64.rpm
 rm telegraf-$TELEGRAF_VERSION-1.x86_64.rpm
-
-mkfifo /var/spool/influxdb.sock
-chown telegraf /var/spool/influxdb.sock
-
 usermod -aG docker telegraf
 
 # Stop telegraf as it won't be able to write telemetry until the signer is running.
@@ -125,10 +115,6 @@ service telegraf stop
 
 # Prepare and pull docker images and verify their checksums
 echo "Prepare Docker..."
-
-# TODO: replace with public repo
-echo "Login to EWF Repository"
-
 mkdir -p ~/.docker
 cat > ~/.docker/config.json << EOF
 {
@@ -137,19 +123,12 @@ cat > ~/.docker/config.json << EOF
     }
 }
 EOF
-docker pull $PARITY_VERSION
 
 # verify image
+docker pull $PARITY_VERSION
 IMGHASH="$(docker image inspect $PARITY_VERSION|jq -r '.[0].Id')"
 if [ "$PARITY_CHKSUM" != "$IMGHASH" ]; then
   echo "ERROR: Unable to verify parity docker image. Checksum missmatch."
-  exit -1;
-fi
-
-docker pull energyweb/telemetry-signer:$SIGNER_VERSION
-IMGHASH="$(docker image inspect energyweb/telemetry-signer:$SIGNER_VERSION|jq -r '.[0].Id')"
-if [ "$SIGNER_CHKSUM" != "$IMGHASH" ]; then
-  echo "ERROR: Unable to verify telemetry signer docker image. Checksum missmatch."
   exit -1;
 fi
 
@@ -160,12 +139,19 @@ if [ "$NODECONTROL_CHKSUM" != "$IMGHASH" ]; then
   exit -1;
 fi
 
+docker pull energyweb/parity-telemetry:$PARITYTELEMETRY_VERSION
+IMGHASH="$(docker image inspect energyweb/parity-telemetry:$PARITYTELEMETRY_VERSION|jq -r '.[0].Id')"
+if [ "$PARITYTELEMETRY_CHKSUM" != "$IMGHASH" ]; then
+  echo "ERROR: Unable to verify parity-telemetry docker image. Checksum missmatch."
+  exit -1;
+fi
+
 # Create the directory structure
 mkdir docker-stack
+chmod 750 docker-stack
 cd docker-stack
 mkdir config
 mkdir chain-data
-mkdir signer-data
 
 touch config/peers
 
@@ -196,7 +182,7 @@ docker run -d --name parity-keygen \
     -p 127.0.0.1:8545:8545 \
     -v ${XPATH}/chain-data/:/home/parity/.local/share/io.parity.ethereum/ \
     -v ${XPATH}/config:/parity/config:ro ${PARITY_VERSION} \
-    --config /parity/config/parity-non-signing.toml
+    --config /parity/config/parity-non-signing.toml --jsonrpc-apis=parity_accounts
 
 # Wait for parity to sort itself out
 sleep 20
@@ -211,11 +197,14 @@ EOF
 ADDR=`curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data "$(generate_account_data)" | jq -r '.result'`
 
 echo "Account created: $ADDR"
-SC_USER="$(echo $ADDR | cut -c -20)"
+INFLUX_USER="$(echo $ADDR | cut -c -20)"
+INFLUX_PASS="$(openssl rand -hex 16)"
 
 # got the key now discard of the parity instance
 docker stop parity-keygen
 docker rm -f parity-keygen
+
+PARITY_KEY_FILE="$(ls -1 ./chain-data/keys/$CHAINNNAME/|grep UTC|head -n1)"
 
 cat >> config/parity-signing.toml << EOF
 engine_signer = "$ADDR"
@@ -225,17 +214,13 @@ password = ["/parity/authority.pwd"]
 keys_iterations = 10240
 EOF
 
-
+# Prepare parity telemetry pipe
+mkfifo /var/spool/parity.sock
+chown telegraf /var/spool/parity.sock
+# touch the blockfile to avoid docker creating a dir
+touch config/nc-lastblock.txt
 # Write the docker-compose file to disk
 writeDockerCompose
-
-# generate telemetry signer key
-echo "Generating Telemetry Signer keypair..."
-SIGNER_PUBKEY="$(docker run --rm \
- -v $XPATH/signer-data:/signer \
- -e TELEMETRY_INTERNAL_DIR=/signer \
- -e TELEMETRY_NODE_ID=${ADDR} \
- energyweb/telemetry-signer:${SIGNER_VERSION} --genkeys | tail -n1)"
 
 # start everything up
 docker-compose up -d
@@ -290,10 +275,8 @@ echo "Company: $COMPANY_NAME" >> install-summary.txt
 echo "Validator Address: $ADDR" >> install-summary.txt
 echo "Enode: $ENODE" >> install-summary.txt
 echo "IP Address: $EXTERNAL_IP" >> install-summary.txt
-echo "Telemetry Public Key: $SIGNER_PUBKEY" >> install-summary.txt
-
-echo "Telemetry Second Channel Username: $SC_USER" >> install-summary.txt
-echo "Telemetry Second Channel Password: $SC_PW" >> install-summary.txt
+echo "InfluxDB Username: $INFLUX_USER" >> install-summary.txt
+echo "InfluxDB Password: $INFLUX_PASS" >> install-summary.txt
 cat install-summary.txt
 
 
@@ -328,55 +311,43 @@ services:
     volumes:
       - $PWD:$PWD
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/nc-lastblock.txt:/lastblock.txt
+      - $PARITY_KEY_FILE:/paritykey:ro
     environment:
       - CONTRACT_ADDRESS=0x1204700000000000000000000000000000000007
       - STACK_PATH=$PWD
       - RPC_ENDPOINT=http://parity:8545
       - VALIDATOR_ADDRESS=${VALIDATOR_ADDRESS}
+      - BLOCKFILE_PATH=/lastblock.txt
+      - KEYFILE_PATH=/paritykey
 
-  signer:
-    image: energyweb/telemetry-signer:${SIGNER_VERSION}
+  parity-telemetry:
+    image: energyweb/parity-telemetry:${PARITYTELEMETRY_VERSION}
     restart: always
     environment:
-        - INFLUX_SOCKET=/influxdb.sock
-        - TELEMETRY_INGRESS_HOST=${TELEMETRY_INGRESS_HOST}
-        - TELEMETRY_INGRESS_FINGERPRINT=${TELEMETRY_INGRESS_FINGERPRINT}
-        - TELEMETRY_NODE_ID=${VALIDATOR_ADDRESS}
-        - TELEMETRY_INTERNAL_DIR=/signer
-        - RPC_ENDPOINT=http://parity:8545
-        - PARITY_WEB_SOCKET=ws://parity:8546
-        - SFTP_HOST=$SFTP_HOST
-        - SFTP_PORT=$SFTP_PORT
-        - SFTP_USER=$SFTP_USER
-        - SFTP_PASS=$SFTP_PASS
-        - SFTP_FINGER_PRINT=$SFTP_FINGER_PRINT
-        - FTP_DIR=$FTP_DIR
+      - WSURL=ws://parity:8546
+      - HTTPURL=http://parity:8545
+      - PIPENAME=/var/spool/parity.sock
     volumes:
-        - /var/spool/influxdb.sock:/influxdb.sock
-        - ./signer-data:/signer
-volumes:
-  signer-internal:
+      - /var/spool/parity.sock:/var/spool/parity.sock
 EOF
 
 cat > .env << EOF
 VALIDATOR_ADDRESS=$ADDR
-TELEMETRY_INGRESS_HOST=$INGRESS_IP
-TELEMETRY_INGRESS_FINGERPRINT=$INGRESS_FP
 NODECONTROL_VERSION=$NODECONTROL_VERSION
 EXTERNAL_IP=$EXTERNAL_IP
-SIGNER_VERSION=$SIGNER_VERSION
 PARITY_VERSION=$PARITY_VERSION
+PARITYTELEMETRY_VERSION=$PARITYTELEMETRY_VERSION
 IS_SIGNING=signing
+PARITY_KEY_FILE=./chain-data/keys/${CHAINNNAME}/${PARITY_KEY_FILE}
 CHAINSPEC_CHKSUM=$CHAINSPEC_CHKSUM
 CHAINSPEC_URL=https://example.com
 PARITY_CHKSUM=$PARITY_CHKSUM
-SFTP_HOST=$SC_IP
-SFTP_FINGER_PRINT=$SC_FP
-SFTP_PORT=55
-SFTP_USER=$SC_USER
-SFTP_PASS=$SC_PW
-FTP_DIR=/upload
 EOF
+
+chmod 640 .env
+chmod 640 docker-compose.yml
+
 }
 
 writeSShConfig() {
@@ -420,9 +391,12 @@ cat > /etc/telegraf/telegraf.conf << EOF
   logfile = ""
   hostname = "$HOSTNAME"
   omit_hostname = false
-[[outputs.file]]
-  files = ["/var/spool/influxdb.sock"]
-  data_format = "influx"
+[[outputs.influxdb]]
+  urls = ["https://$CHAINNAMELOWER-influx-ingress.energyweb.org/"]
+  database = "telemetry_$CHAINNAMELOWER"
+  skip_database_creation = true
+  username = "$INFLUX_USER"
+  password = "$INFLUX_PASS"
 [[inputs.cpu]]
   percpu = true
   totalcpu = true
@@ -439,6 +413,16 @@ cat > /etc/telegraf/telegraf.conf << EOF
     tag_env = []
     endpoint = "unix:///var/run/docker.sock"
 [[inputs.net]]
+[[inputs.tail]]
+   files = ["/var/spool/parity.sock"]
+   pipe = true
+   data_format = "json"
+
+   tag_keys = []
+   json_time_key = "blockReceived"
+   json_time_format = "unix_ms"
+   json_string_fields = ["client","blockHash"]
+   name_override = "parity"
 EOF
 }
 
@@ -472,7 +456,7 @@ disable = false
 port = 8545
 interface = "0.0.0.0"
 cors = []
-apis = ["eth", "net", "parity", "web3","parity_accounts"]
+apis = ["eth", "net", "parity", "web3"]
 
 [websockets]
 disable = false
@@ -512,6 +496,7 @@ gas_floor_target = "$BLOCK_GAS"
 tx_gas_limit = "$BLOCK_GAS"
 extra_data = "$COMPANY_NAME"
 EOF
+chmod 640 config/parity.toml
 }
 
 main
