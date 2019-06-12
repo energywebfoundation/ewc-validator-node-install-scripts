@@ -19,14 +19,14 @@ TELEGRAF_CHKSUM="d2403d2c31806470d321c67443684549d4926badbb6cc4f0f64f9f4d997f3ee
 
 # Chain/PArity configuration
 BLOCK_GAS="8000000"
-CHAINNNAME="Volta"
+CHAINNAME="Volta"
 CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/Volta.json"
 
 
 KEY_SEED="0x$(openssl rand -hex 32)"
 # Try to guess the current primary network interface
 NETIF="$(ip route | grep default | awk '{print $5}')"
-CHAINNAMELOWER="$(echo $CHAINNNAME | awk '{print tolower($0)}')"
+CHAINNAMELOWER="$(echo $CHAINNAME | awk '{print tolower($0)}')"
 
 # Install system updates and required tools and dependencies
 echo "Installing updates"
@@ -204,7 +204,7 @@ INFLUX_PASS="$(openssl rand -hex 16)"
 docker stop parity-keygen
 docker rm -f parity-keygen
 
-PARITY_KEY_FILE="$(ls -1 ./chain-data/keys/$CHAINNNAME/|grep UTC|head -n1)"
+PARITY_KEY_FILE="$(ls -1 ./chain-data/keys/$CHAINNAME/|grep UTC|head -n1)"
 
 cat >> config/parity-signing.toml << EOF
 engine_signer = "$ADDR"
@@ -340,7 +340,7 @@ EXTERNAL_IP=$EXTERNAL_IP
 PARITY_VERSION=$PARITY_VERSION
 PARITYTELEMETRY_VERSION=$PARITYTELEMETRY_VERSION
 IS_SIGNING=signing
-PARITY_KEY_FILE=./chain-data/keys/${CHAINNNAME}/${PARITY_KEY_FILE}
+PARITY_KEY_FILE=./chain-data/keys/${CHAINNAME}/${PARITY_KEY_FILE}
 CHAINSPEC_CHKSUM=$CHAINSPEC_CHKSUM
 CHAINSPEC_URL=https://example.com
 PARITY_CHKSUM=$PARITY_CHKSUM
