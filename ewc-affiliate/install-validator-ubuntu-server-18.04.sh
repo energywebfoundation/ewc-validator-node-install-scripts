@@ -224,7 +224,7 @@ engine_signer = "$ADDR"
 password = ["/parity/authority.pwd"]
 keys_iterations = 10240
 EOF
-
+chmod 640 config/parity-signing.toml
 # Prepare parity telemetry pipe
 mkfifo /var/spool/parity.sock
 chown telegraf /var/spool/parity.sock
@@ -503,7 +503,7 @@ gas_floor_target = "$BLOCK_GAS"
 tx_gas_limit = "$BLOCK_GAS"
 extra_data = "$COMPANY_NAME"
 EOF
-chmod 640 config/parity.toml
+chmod 640 config/parity-non-signing.toml
 }
 
 main
