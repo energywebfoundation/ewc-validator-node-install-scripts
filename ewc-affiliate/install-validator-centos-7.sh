@@ -156,7 +156,7 @@ mkdir chain-data
 touch config/peers
 
 chown 1000:1000 chain-data
-chmod 750 chain-data
+chmod 777 chain-data
 
 # Prepare the parity client
 # Creates 2 config one with siging enabled and one without
@@ -213,7 +213,7 @@ engine_signer = "$ADDR"
 password = ["/parity/authority.pwd"]
 keys_iterations = 10240
 EOF
-chmod 640 config/parity-signing.toml
+chmod 644 config/parity-signing.toml
 
 # Prepare parity telemetry pipe
 mkfifo /var/spool/parity.sock
@@ -497,7 +497,7 @@ gas_floor_target = "$BLOCK_GAS"
 tx_gas_limit = "$BLOCK_GAS"
 extra_data = "$COMPANY_NAME"
 EOF
-chmod 640 config/parity-non-signing.toml
+chmod 644 config/parity-non-signing.toml
 }
 
 main
