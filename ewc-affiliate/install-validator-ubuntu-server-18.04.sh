@@ -18,10 +18,10 @@ PARITYTELEMETRY_CHKSUM="sha256:00e3a14c5e9c6629eedfcece86e12599f5813c0f2fc075689
 TELEGRAF_VERSION="1.9.4"
 TELEGRAF_CHKSUM="5e52c05988c17d652dbbdfc7a501be69490b6c935b66ccc1ea0aceaca7b48159  telegraf_1.9.4-1_amd64.deb"
 
-# Chain/PArity configuration
+# Chain/Parity configuration
 BLOCK_GAS="8000000"
-CHAINNAME="Volta"
-CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/Volta.json"
+CHAINNAME="EnergyWebChain"
+CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/EnergyWebChain.json"
 KEY_SEED="0x$(openssl rand -hex 32)"
 
 # Make sure locales are properly set and generated
