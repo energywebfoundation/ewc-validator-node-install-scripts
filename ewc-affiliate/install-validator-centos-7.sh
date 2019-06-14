@@ -17,11 +17,10 @@ PARITYTELEMETRY_CHKSUM="sha256:00e3a14c5e9c6629eedfcece86e12599f5813c0f2fc075689
 TELEGRAF_VERSION="1.9.4"
 TELEGRAF_CHKSUM="d2403d2c31806470d321c67443684549d4926badbb6cc4f0f64f9f4d997f3eec  telegraf-1.9.4-1.x86_64.rpm"
 
-# Chain/PArity configuration
+# Chain/Parity configuration
 BLOCK_GAS="8000000"
-CHAINNAME="Volta"
-CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/Volta.json"
-
+CHAINNAME="EnergyWebChain"
+CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/EnergyWebChain.json"
 
 KEY_SEED="0x$(openssl rand -hex 32)"
 # Try to guess the current primary network interface
