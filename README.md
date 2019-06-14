@@ -6,16 +6,7 @@ EWC and Volta affiliate validator node installation scripts.
 
 ### Steps 
 
-1. Prepare an host according to the [system architecture paper](https://github.com/energywebfoundation/system-design-spec-live) (minimal install with ssh) with one of the following operating systems:
-    - Debian v9.x
-    - Ubuntu 18.04 LTS
-    - CentOS 7
-2. Copy the script matching the installed OS from the `affiliate` directory to the host
-3. SSH into the new host
-4. Make sure the latest system updates are installed by running `apt-get update && apt-get dist-upgrade` (debian/ubuntu) or `yum update` (centos)
-5. Make the scrip executable with `chmod +x ./install-*.sh`
-6. Run the script (user parameter `--auto` takes default values for node-name and generates a random key which is NOT recommended for production use)
-7. Send the installation summary to EWF netops to [netops@energyweb.org](netops@energyweb.org)
+See our Atlassian wiki for[installation instructions](https://energyweb.atlassian.net/wiki/spaces/EWF/pages/718536737/Setting+Up+a+New+Validator+Node)
 
 ## Shared secrets
 
