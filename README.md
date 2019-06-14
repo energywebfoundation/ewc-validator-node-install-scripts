@@ -6,7 +6,7 @@ EWC and Volta affiliate validator node installation scripts.
 
 ### Steps 
 
-See our Atlassian wiki for[installation instructions](https://energyweb.atlassian.net/wiki/spaces/EWF/pages/718536737/Setting+Up+a+New+Validator+Node)
+See our Atlassian wiki for [installation instructions](https://energyweb.atlassian.net/wiki/spaces/EWF/pages/718536737/Setting+Up+a+New+Validator+Node)
 
 ## Shared secrets
 
