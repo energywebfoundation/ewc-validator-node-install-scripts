@@ -5,8 +5,8 @@ set -e
 set -o errexit
 
 # Configuration Block - Docker checksums are the image Id
-PARITY_VERSION="parity/parity:v2.4.6"
-PARITY_CHKSUM="sha256:952161b0410746ee6500b21e83a8cf422c24f1d86f031e3e7a48c5b501e70638"
+PARITY_VERSION="parity/parity:v2.4.8-stable"
+PARITY_CHKSUM="sha256:aa72e6af1b58b107fd2733632e3f4b419f2f1b22205b4cd18a3e104bd9d1e7d8"
 
 NODECONTROL_VERSION="v1.0.0"
 NODECONTROL_CHKSUM="sha256:c23d3f66f1c7861c43ba1fe900eb734bcab7e2352f34b51db91beb6f3d757c35"
