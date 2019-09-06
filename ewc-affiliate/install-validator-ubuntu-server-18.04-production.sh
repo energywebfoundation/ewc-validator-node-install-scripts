@@ -3,10 +3,11 @@
 # Make the script exit on any error
 set -e
 set -o errexit
+DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-PARITY_VERSION="parity/parity:v2.5.6-stable"
-PARITY_CHKSUM="sha256:8886ee3bce3c5b768e5b39344f0f9c1390eb00e7fd1795c997651ad440445b65"
+PARITY_VERSION="parity/parity:v2.5.7-stable"
+PARITY_CHKSUM="sha256:c0083f652c30488e7fde8a44bbc80cad042b36a78bd87ba8947ab24183c659ad"
 
 NODECONTROL_VERSION="v1.0.0"
 NODECONTROL_CHKSUM="sha256:c23d3f66f1c7861c43ba1fe900eb734bcab7e2352f34b51db91beb6f3d757c35"
@@ -15,26 +16,37 @@ PARITYTELEMETRY_VERSION="1.1.0"
 PARITYTELEMETRY_CHKSUM="sha256:00e3a14c5e9c6629eedfcece86e12599f5813c0f2fc075689efa1233aa0cfef7"
 
 TELEGRAF_VERSION="1.9.4"
-TELEGRAF_CHKSUM="d2403d2c31806470d321c67443684549d4926badbb6cc4f0f64f9f4d997f3eec  telegraf-1.9.4-1.x86_64.rpm"
+TELEGRAF_CHKSUM="5e52c05988c17d652dbbdfc7a501be69490b6c935b66ccc1ea0aceaca7b48159  telegraf_1.9.4-1_amd64.deb"
 
 # Chain/Parity configuration
 BLOCK_GAS="8000000"
 CHAINNAME="EnergyWebChain"
 CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/EnergyWebChain.json"
-
 KEY_SEED="0x$(openssl rand -hex 32)"
+
+# Make sure locales are properly set and generated
+apt-get update -y
+apt-get install locales -y
+echo "Setup locales"
+cat > /etc/locale.gen << EOF
+de_DE.UTF-8 UTF-8
+en_US.UTF-8 UTF-8
+EOF
+locale-gen
+echo -e 'LANG="en_US.UTF-8"\nLANGUAGE="en_US:en"\n' > /etc/default/locale
+source /etc/default/locale
+
 # Try to guess the current primary network interface
 NETIF="$(ip route | grep default | awk '{print $5}')"
 CHAINNAMELOWER="$(echo $CHAINNAME | awk '{print tolower($0)}')"
-
 # Install system updates and required tools and dependencies
-echo "Installing updates"
-systemctl disable firewalld
-systemctl stop firewalld
-yum -y install epel-release
-yum -y update
-yum -y install iptables-services jq curl expect wget bind-utils policycoreutils-python
-#apt-get install -y net-tools iptables-persistent debsums chkrootkit
+echo "Installing dependencies"
+
+# Preparing iptables auto-save
+echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections
+echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections
+
+apt-get install -y curl net-tools dnsutils expect jq iptables-persistent debsums chkrootkit
 
 # Collecting information from the user
 
@@ -64,17 +76,17 @@ main() {
 # Secure SSH by disable password login and only allowing login as user with keys. Also shifts SSH port from 22 to 2222
 echo "Securing SSH..."
 writeSShConfig
-semanage port -a -t ssh_port_t -p tcp 2222
-service sshd restart
+service ssh restart
 
 # Add more DNS servers (cloudflare and google) than just the DHCP one to increase DNS resolve stability
 echo "Add more DNS servers"
+echo "dns-nameservers 8.8.8.8 1.1.1.1" >> /etc/network/interfaces
 echo "nameserver 1.1.1.1" >> /etc/resolv.conf
 echo "nameserver 8.8.8.8" >> /etc/resolv.conf
 
 # Disable the DHPC clients ability to overwrite resolv.conf
-echo 'make_resolv_conf() { :; }' > /etc/dhclient-enter-hooks
-chmod 755 /etc/dhclient-enter-hooks
+echo 'make_resolv_conf() { :; }' > /etc/dhcp/dhclient-enter-hooks.d/leave_my_resolv_conf_alone
+chmod 755 /etc/dhcp/dhclient-enter-hooks.d/leave_my_resolv_conf_alone
 
 # Install current stable Docker
 echo "Install Docker..."
@@ -85,8 +97,7 @@ rm get-docker.sh
 
 # Write docker config
 writeDockerConfig
-systemctl enable docker
-systemctl restart docker
+service docker restart
 
 # Install docker-compose
 echo "install compose"
@@ -95,18 +106,17 @@ chmod +x /usr/bin/docker-compose
 
 # Install the Telegrad telemetry collector
 echo "Install Telegraf..."
-#wget https://dl.influxdata.com/telegraf/releases/telegraf_$TELEGRAF_VERSION-1_amd64.deb
-wget https://dl.influxdata.com/telegraf/releases/telegraf-$TELEGRAF_VERSION-1.x86_64.rpm
+wget https://dl.influxdata.com/telegraf/releases/telegraf_$TELEGRAF_VERSION-1_amd64.deb
 
 # Verify
-TG_CHK="$(sha256sum telegraf-$TELEGRAF_VERSION-1.x86_64.rpm)"
+TG_CHK="$(sha256sum telegraf_$TELEGRAF_VERSION-1_amd64.deb)"
 if [ "$TELEGRAF_CHKSUM" != "$TG_CHK" ]; then
   echo "ERROR: Unable to verify telegraf package. Checksum missmatch."
   exit -1;
 fi
 
-yum -y localinstall telegraf-$TELEGRAF_VERSION-1.x86_64.rpm
-rm telegraf-$TELEGRAF_VERSION-1.x86_64.rpm
+dpkg -i telegraf_$TELEGRAF_VERSION-1_amd64.deb
+rm telegraf_$TELEGRAF_VERSION-1_amd64.deb
 usermod -aG docker telegraf
 
 # Stop telegraf as it won't be able to write telemetry until the signer is running.
@@ -114,6 +124,7 @@ service telegraf stop
 
 # Prepare and pull docker images and verify their checksums
 echo "Prepare Docker..."
+
 mkdir -p ~/.docker
 cat > ~/.docker/config.json << EOF
 {
@@ -122,9 +133,9 @@ cat > ~/.docker/config.json << EOF
     }
 }
 EOF
+docker pull $PARITY_VERSION
 
 # verify image
-docker pull $PARITY_VERSION
 IMGHASH="$(docker image inspect $PARITY_VERSION|jq -r '.[0].Id')"
 if [ "$PARITY_CHKSUM" != "$IMGHASH" ]; then
   echo "ERROR: Unable to verify parity docker image. Checksum missmatch."
@@ -144,7 +155,6 @@ if [ "$PARITYTELEMETRY_CHKSUM" != "$IMGHASH" ]; then
   echo "ERROR: Unable to verify parity-telemetry docker image. Checksum missmatch."
   exit -1;
 fi
-
 # Create the directory structure
 mkdir docker-stack
 chmod 750 docker-stack
@@ -213,7 +223,6 @@ password = ["/parity/authority.pwd"]
 keys_iterations = 10240
 EOF
 chmod 644 config/parity-signing.toml
-
 # Prepare parity telemetry pipe
 mkfifo /var/spool/parity.sock
 chown telegraf /var/spool/parity.sock
@@ -236,8 +245,6 @@ service telegraf restart
 
 echo "Setting up firewall"
 
-systemctl enable iptables
-
 # non-docker services
 iptables -F INPUT
 iptables -F DOCKER-USER || true
@@ -257,7 +264,7 @@ iptables -P INPUT DROP
 
 iptables -A DOCKER-USER -i $NETIF -j FILTERS
 iptables -A DOCKER-USER -j RETURN
-service iptables save
+iptables-save > /etc/iptables/rules.v4
 
 # run automated post-install audit
 cd /opt/
@@ -347,7 +354,6 @@ EOF
 
 chmod 640 .env
 chmod 640 docker-compose.yml
-
 }
 
 writeSShConfig() {
@@ -427,7 +433,6 @@ EOF
 }
 
 function writeDockerConfig() {
-  mkdir -p /etc/docker
   cat > /etc/docker/daemon.json << EOF
 {
   "log-driver": "json-file",
@@ -489,8 +494,8 @@ disable_periodic = true
 force_sealing = true
 usd_per_tx = "0.000000000000000001"
 usd_per_eth = "1"
-min_gas_price = 1
 price_update_period = "hourly"
+min_gas_price = 1
 gas_cap = "$BLOCK_GAS"
 gas_floor_target = "$BLOCK_GAS"
 tx_gas_limit = "$BLOCK_GAS"
