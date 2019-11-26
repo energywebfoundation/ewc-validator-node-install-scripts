@@ -265,6 +265,7 @@ wget https://downloads.cisofy.com/lynis/lynis-2.7.1.tar.gz
 tar xvzf lynis-2.7.1.tar.gz
 mv lynis /usr/local/
 ln -s /usr/local/lynis/lynis /usr/local/bin/lynis
+cd /usr/local/lynis/
 lynis audit system 
 
 
