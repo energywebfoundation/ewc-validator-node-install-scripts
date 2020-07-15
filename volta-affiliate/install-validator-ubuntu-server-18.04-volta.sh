@@ -6,8 +6,8 @@ set -o errexit
 DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-PARITY_VERSION="parity/parity:v2.7.2-stable"
-PARITY_CHKSUM="sha256:7b78bbdbb3f9cd17ff409fce913fcd3d92c616091359f78da0921a550accd780"
+PARITY_VERSION="parity/parity:v2.5.13-stable"
+PARITY_CHKSUM="sha256:36be05aeb6426b5615e2d6b71c9590dbc4a4d03ae7bcfa53edefdaeef28d3f41"
 
 PARITYTELEMETRY_VERSION="1.1.0"
 PARITYTELEMETRY_CHKSUM="sha256:00e3a14c5e9c6629eedfcece86e12599f5813c0f2fc075689efa1233aa0cfef7"
