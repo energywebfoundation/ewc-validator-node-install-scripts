@@ -9,9 +9,6 @@ DEBIAN_FRONTEND=noninteractive
 PARITY_VERSION="parity/parity:v2.5.13-stable"
 PARITY_CHKSUM="sha256:36be05aeb6426b5615e2d6b71c9590dbc4a4d03ae7bcfa53edefdaeef28d3f41"
 
-NODECONTROL_VERSION="v1.0.0"
-NODECONTROL_CHKSUM="sha256:c23d3f66f1c7861c43ba1fe900eb734bcab7e2352f34b51db91beb6f3d757c35"
-
 PARITYTELEMETRY_VERSION="1.1.0"
 PARITYTELEMETRY_CHKSUM="sha256:00e3a14c5e9c6629eedfcece86e12599f5813c0f2fc075689efa1233aa0cfef7"
 
@@ -139,13 +136,6 @@ docker pull $PARITY_VERSION
 IMGHASH="$(docker image inspect $PARITY_VERSION|jq -r '.[0].Id')"
 if [ "$PARITY_CHKSUM" != "$IMGHASH" ]; then
   echo "ERROR: Unable to verify parity docker image. Checksum missmatch."
-  exit -1;
-fi
-
-docker pull energyweb/nodecontrol:$NODECONTROL_VERSION
-IMGHASH="$(docker image inspect energyweb/nodecontrol:$NODECONTROL_VERSION|jq -r '.[0].Id')"
-if [ "$NODECONTROL_CHKSUM" != "$IMGHASH" ]; then
-  echo "ERROR: Unable to verify nodecontrol docker image. Checksum missmatch."
   exit -1;
 fi
 
@@ -312,22 +302,6 @@ services:
       - 30303:30303/udp
       - 127.0.0.1:8545:8545
 
-  nodecontrol:
-    image: energyweb/nodecontrol:${NODECONTROL_VERSION}
-    restart: always
-    volumes:
-      - $PWD:$PWD
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./config/nc-lastblock.txt:/lastblock.txt
-      - $PARITY_KEY_FILE:/paritykey:ro
-    environment:
-      - CONTRACT_ADDRESS=0x1204700000000000000000000000000000000007
-      - STACK_PATH=$PWD
-      - RPC_ENDPOINT=http://parity:8545
-      - VALIDATOR_ADDRESS=${VALIDATOR_ADDRESS}
-      - BLOCKFILE_PATH=/lastblock.txt
-      - KEYFILE_PATH=/paritykey
-
   parity-telemetry:
     image: energyweb/parity-telemetry:${PARITYTELEMETRY_VERSION}
     restart: always
@@ -341,7 +315,6 @@ EOF
 
 cat > .env << EOF
 VALIDATOR_ADDRESS=$ADDR
-NODECONTROL_VERSION=$NODECONTROL_VERSION
 EXTERNAL_IP=$EXTERNAL_IP
 PARITY_VERSION=$PARITY_VERSION
 PARITYTELEMETRY_VERSION=$PARITYTELEMETRY_VERSION
