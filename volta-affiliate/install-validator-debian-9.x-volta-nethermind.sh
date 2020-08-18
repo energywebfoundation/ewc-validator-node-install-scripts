@@ -6,8 +6,8 @@ set -o errexit
 DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.8.80"
-NETHERMIND_CHKSUM="sha256:fb4b2c1fd1a76f653f1622a577dbad05f859584fbc188c5d470d8c925e5de2cc"
+export NETHERMIND_VERSION="nethermind/nethermind:1.8.89"
+NETHERMIND_CHKSUM="sha256:6f92d584e6188932a0683948447e2d14824418e3a3443ca7d30ea7c29309bfaa"
 
 export NETHERMINDTELEMETRY_VERSION="latest"
 NETHERMINDTELEMETRY_CHKSUM="sha256:921b9512d8831c1c4bec02961bc5260c62725b336688ffab88928d3b0ef4c5fa"
