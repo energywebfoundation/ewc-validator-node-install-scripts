@@ -39,7 +39,8 @@ if [[ "$#" -eq 3 ]]; then
   			echo "ERROR: Unable to verify Nethermind docker image. Checksum missmatch."
   			exit 1;
 		fi
-		docker-compose restart
+		docker-compose down
+		docker-compose up -d
 		echo "Updated Nethermind to $NETHERMIND_VERSION"
 	else
 		echo "Wrong folder: cd /home/admin/docker-stack if your login user is admin"
