@@ -17,6 +17,7 @@ TELEGRAF_CHKSUM="b539ed52df8ec63258ea97e91cc1145333b0345bca3f5863bebfca60df6f46e
 
 # Chain/Nethermind configuration
 export CHAINNAME="energyweb"
+BLOCK_GAS="8000000"
 CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/EnergyWebChain.json"
 NLOG_CONFIG="https://raw.githubusercontent.com/NethermindEth/nethermind/master/src/Nethermind/Nethermind.Runner/NLog.config"
 
@@ -479,6 +480,9 @@ cat > configs/energyweb.cfg << EOF
     "MinLevel": "Off",
     "ServerUrl": "http://localhost:5341",
     "ApiKey": ""
+  },
+  "Mining": {
+    "TargetBlockGasLimit": $BLOCK_GAS
   },
   "Aura": {
     "ForceSealing": true

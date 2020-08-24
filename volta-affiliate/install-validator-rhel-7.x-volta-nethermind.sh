@@ -17,6 +17,7 @@ TELEGRAF_CHKSUM="9857e82aaac65660afb9eaf93384fadc0fc5c108077e67ab12d0ed8e5c64492
 
 # Chain/Nethermind configuration
 export CHAINNAME="volta"
+BLOCK_GAS="8000000"
 CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/Volta.json"
 NLOG_CONFIG="https://raw.githubusercontent.com/NethermindEth/nethermind/master/src/Nethermind/Nethermind.Runner/NLog.config"
 
@@ -472,6 +473,9 @@ cat > configs/volta.cfg << EOF
     "MinLevel": "Off",
     "ServerUrl": "http://localhost:5341",
     "ApiKey": ""
+  },
+  "Mining": {
+    "TargetBlockGasLimit": $BLOCK_GAS
   },
   "Aura": {
     "ForceSealing": true
