@@ -9,7 +9,7 @@ DEBIAN_FRONTEND=noninteractive
 export NETHERMIND_VERSION="nethermind/nethermind:1.8.89"
 NETHERMIND_CHKSUM="sha256:6f92d584e6188932a0683948447e2d14824418e3a3443ca7d30ea7c29309bfaa"
 
-export NETHERMINDTELEMETRY_VERSION="latest"
+export NETHERMINDTELEMETRY_VERSION="1.0.0"
 NETHERMINDTELEMETRY_CHKSUM="sha256:3ef12c74dcc3bfe67efc54f30ffea8400ce83e932d8ba38a2989c5cf65008987"
 
 TELEGRAF_VERSION="1.15.2"
@@ -262,7 +262,7 @@ cd /opt/
 wget https://downloads.cisofy.com/lynis/lynis-2.7.1.tar.gz
 tar xvzf lynis-2.7.1.tar.gz
 mv lynis /usr/local/
-ln -s /usr/local/lynis/lynis /usr/local/bin/lynis
+ln -s /usr/local/lynis/lynis /usr/bin/lynis
 lynis audit system 
 
 
