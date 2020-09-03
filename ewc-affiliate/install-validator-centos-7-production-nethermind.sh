@@ -35,12 +35,6 @@ systemctl stop firewalld
 
 # Collecting information from the user
 
-
-if [ -f /sys/hypervisor/uuid ] && [ `head -c 3 /sys/hypervisor/uuid` == ec2 ]; then
-else
-    
-fi
-
 # Get external IP
 if [ -f /sys/hypervisor/uuid ]; then
   if [ `head -c 3 /sys/hypervisor/uuid` == "ec2" ]; then
