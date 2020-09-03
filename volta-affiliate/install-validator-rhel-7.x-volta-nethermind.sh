@@ -308,7 +308,6 @@ services:
       - ./configs:/nethermind/configs:ro
       - ./database:/nethermind/nethermind_db
       - ./keystore:/nethermind/keystore
-      - ./logs:/nethermind/logs
       - ./NLog.config:/nethermind/NLog.config
     ports:
       - 30303:30303
