@@ -48,34 +48,19 @@ apt-get install -y curl net-tools dnsutils expect jq iptables-persistent debsums
 # Collecting information from the user
 
 # Get external IP
-if [ -f /sys/hypervisor/uuid ]; then
-  if [ `head -c 3 /sys/hypervisor/uuid` == "ec2" ]; then
-    echo Detected Amazon instance
-    EXTERNAL_IP="$(dig @resolver1.opendns.com ANY myip.opendns.com +short)"
-  else
-    EXTERNAL_IP="$(ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\1/p')"
-  fi
-elif [ -r /sys/devices/virtual/dmi/id/product_uuid ]; then
-  # If the file exists AND is readable by us, we can rely on it.
-  if [ `head -c 3 /sys/devices/virtual/dmi/id/product_uuid` == "EC2" ]; then
-    echo Detected Amazon instance
-    EXTERNAL_IP="$(dig @resolver1.opendns.com ANY myip.opendns.com +short)"
-  else
-    EXTERNAL_IP="$(ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\1/p')"
-  fi
+if EXTERNAL_IP=$(curl --fail -s -m 2 http://ipv4.icanhazip.com); then
+    echo Public IP: $EXTERNAL_IP
+elif EXTERNAL_IP=$(curl --fail -s -m 2 http://checkip.amazonaws.com); then
+    echo Public IP: $EXTERNAL_IP
+elif EXTERNAL_IP=$(curl --fail -s -m 2 http://ipinfo.io/ip); then
+    echo Public IP: $EXTERNAL_IP
+elif EXTERNAL_IP=$(curl --fail -s -m 2 http://api.ipify.org); then
+    echo Public IP: $EXTERNAL_IP
 else
-  # verifying Amazon's signature, see here:
-  #    https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
-  if $(curl -s -m 5 http://169.254.169.254/latest/dynamic/instance-identity/document | grep -q availabilityZone) ; then
-    echo Detected Amazon instance
-    EXTERNAL_IP="$(dig @resolver1.opendns.com ANY myip.opendns.com +short)"
-  else
-    EXTERNAL_IP="$(ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).*/\1/p')"
-  fi
-fi
+    echo Failed while detecting public IP address
+fi;
 
-if [ ! "$1" == "--auto" ];
-then
+if [ ! "$1" == "--auto" ]; then
 # Show a warning that SSH login is restriced after install finishes
 whiptail --backtitle="EWF Genesis Node Installer" --title "Warning" --yes-button "Continue" --no-button "Abort" --yesno "After the installation is finished you can only login through SSH with the current user on port 2222 and the key provided in the next steps." 10 60
 HOMEDIR=$(pwd)
