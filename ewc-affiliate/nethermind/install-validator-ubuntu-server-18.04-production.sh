@@ -197,8 +197,8 @@ cat << EOF
 EOF
 }
 
-echo "Waiting 30 sec for nethermind to come up and create an account..."
-sleep 30
+echo "Waiting 45 sec for nethermind to come up and create an account..."
+sleep 45
 # Send request to create account from seed
 ADDR=`curl --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data "$(generate_account_data)" | jq -r '.result'`
 
@@ -230,8 +230,8 @@ docker-compose up -d
 
 # Collect the enode from nethermind over RPC
 
-echo "Waiting 15 sec for nethermind to come up and generate the enode..."
-sleep 15
+echo "Waiting 45 sec for nethermind to come up and generate the enode..."
+sleep 45
 ENODE=`curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data '{ "method": "net_localEnode", "params": [], "id": 1, "jsonrpc": "2.0" }' | jq -r '.result'`
 
 # Now all information is complete to write the telegraf file
@@ -376,8 +376,8 @@ cat > /etc/telegraf/telegraf.conf << EOF
   hostname = "$HOSTNAME"
   omit_hostname = false
 [[outputs.influxdb]]
-  urls = ["https://$CHAINNAME-influx-ingress.energyweb.org/"]
-  database = "telemetry_$CHAINNAME"
+  urls = ["https://${CHAINNAME}chain-influx-ingress.energyweb.org/"]
+  database = "telemetry_${CHAINNAME}chain"
   skip_database_creation = true
   username = "$INFLUX_USER"
   password = "$INFLUX_PASS"
