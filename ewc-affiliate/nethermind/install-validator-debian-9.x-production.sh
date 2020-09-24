@@ -17,6 +17,8 @@ TELEGRAF_CHKSUM="b539ed52df8ec63258ea97e91cc1145333b0345bca3f5863bebfca60df6f46e
 
 # Chain/Nethermind configuration
 export CHAINNAME="energyweb"
+export CHAINNAMETELEGRAF="energywebchain"
+
 BLOCK_GAS="8000000"
 CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/EnergyWebChain.json"
 NLOG_CONFIG="https://raw.githubusercontent.com/NethermindEth/nethermind/master/src/Nethermind/Nethermind.Runner/NLog.config"
@@ -377,8 +379,8 @@ cat > /etc/telegraf/telegraf.conf << EOF
   hostname = "$HOSTNAME"
   omit_hostname = false
 [[outputs.influxdb]]
-  urls = ["https://${CHAINNAME}chain-influx-ingress.energyweb.org/"]
-  database = "telemetry_${CHAINNAME}chain"
+  urls = ["https://$CHAINNAMETELEGRAF-influx-ingress.energyweb.org/"]
+  database = "telemetry_$CHAINNAMETELEGRAF"
   skip_database_creation = true
   username = "$INFLUX_USER"
   password = "$INFLUX_PASS"
