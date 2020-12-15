@@ -26,7 +26,7 @@ NETIF="$(ip route | grep default | awk '{print $5}')"
 
 # Install system updates and required tools and dependencies
 echo "Installing updates"
-rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+rpm -qa | grep -qw epel-release || yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 yum -y update
 yum -y install iptables-services jq curl expect wget bind-utils policycoreutils-python firewalld openssl
 
@@ -92,10 +92,11 @@ chmod 755 /etc/dhclient-enter-hooks
 
 # Install Docker CE
 echo "Install Docker..."
-yum install -y yum-utils device-mapper-persistent-data lvm2
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-yum install -y http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.119.1-1.c57a6f9.el7.noarch.rpm
-yum install docker-ce -y
+yum-config-manager --setopt="docker-ce-stable.baseurl=https://download.docker.com/linux/centos/7/x86_64/stable" --save
+yum-config-manager --add-repo=http://mirror.centos.org/centos/7/extras/x86_64/
+rpm --import https://www.centos.org/keys/RPM-GPG-KEY-CentOS-7
+yum -y install container-selinux docker-ce
 
 # Write docker config
 writeDockerConfig
