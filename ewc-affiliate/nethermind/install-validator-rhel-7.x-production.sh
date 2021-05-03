@@ -6,8 +6,8 @@ set -o errexit
 DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.9.47"
-NETHERMIND_CHKSUM="sha256:e91db245f7dba29c61e0c32a6c3d886dcd3fe2ad3e818581040bb97a913f2c9e"
+export NETHERMIND_VERSION="nethermind/nethermind:1.10.66"
+NETHERMIND_CHKSUM="sha256:ad2d971db70076814ee8c0133222a15ae381e55ead2695a17f5c516a58e2ca32"
 
 export NETHERMINDTELEMETRY_VERSION="1.0.1"
 NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
@@ -425,9 +425,9 @@ cat > configs/energyweb.cfg << EOF
     "WebSocketsEnabled": true,
     "StoreReceipts" : true,
     "IsMining": true,
-    "ChainSpecPath": "chainspec/energyweb.json",
-    "GenesisHash": "0x0b6d3e680af2fc525392c720666cce58e3d8e6fe75ba4b48cb36bcc69039229b",
-    "BaseDbPath": "nethermind_db/energyweb",
+    "PivotNumber": 11610000,
+    "PivotHash": "0x83c49ea5ef801f1337e14de8855d6b0373c8ffb89733cbb4f98bebe683f1e8a2",
+    "PivotTotalDifficulty": "3950678279952095560809779192282828934668696908",
     "LogFileName": "energyweb.logs.txt",
     "MemoryHint": 256000000
   },

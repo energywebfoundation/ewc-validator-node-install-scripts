@@ -6,8 +6,8 @@ set -o errexit
 DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.9.47"
-NETHERMIND_CHKSUM="sha256:e91db245f7dba29c61e0c32a6c3d886dcd3fe2ad3e818581040bb97a913f2c9e"
+export NETHERMIND_VERSION="nethermind/nethermind:1.10.66"
+NETHERMIND_CHKSUM="sha256:ad2d971db70076814ee8c0133222a15ae381e55ead2695a17f5c516a58e2ca32"
 
 export NETHERMINDTELEMETRY_VERSION="1.0.1"
 NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
@@ -447,9 +447,9 @@ cat > configs/volta.cfg << EOF
   },
   "Sync": {
     "FastSync": true,
-    "PivotNumber": 9460000,
-    "PivotHash": "0xe035376e3dadda653f54c3559101078fa7e61b06a954c1cf0a1c078a99d30fb7",
-    "PivotTotalDifficulty": "3219071191072077864363523786304527280042977035",
+    "PivotNumber": 11610000,
+    "PivotHash": "0xf3906f1a1aa8eea0bee34590db4b84b17893aa070fa8b1e3e207a4eb2f4092ed",
+    "PivotTotalDifficulty": "3950678279952095560809779192282828934668697622",
     "FastBlocks" : true,
     "UseGethLimitsInFastBlocks" : false,
     "FastSyncCatchUpHeightDelta": 10000000000
