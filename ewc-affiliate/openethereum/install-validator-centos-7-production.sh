@@ -26,8 +26,8 @@ CHAINNAMELOWER="$(echo $CHAINNAME | awk '{print tolower($0)}')"
 
 # Install system updates and required tools and dependencies
 echo "Installing updates"
-systemctl disable firewalld
-systemctl stop firewalld
+systemctl disable firewalld || true
+systemctl stop firewalld || true
 yum -y install epel-release
 yum -y update
 yum -y install iptables-services jq curl expect wget bind-utils policycoreutils-python
@@ -255,7 +255,7 @@ wget https://downloads.cisofy.com/lynis/lynis-2.7.1.tar.gz
 tar xvzf lynis-2.7.1.tar.gz
 mv lynis /usr/local/
 ln -s /usr/local/lynis/lynis /usr/local/bin/lynis
-lynis audit system 
+/usr/local/bin/lynis audit system 
 
 
 # Print install summary
