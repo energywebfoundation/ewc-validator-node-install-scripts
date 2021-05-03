@@ -295,6 +295,7 @@ services:
       - ./database:/nethermind/nethermind_db
       - ./keystore:/nethermind/keystore
       - ./NLog.config:/nethermind/NLog.config
+      - ./logs:/nethermind/logs
     ports:
       - 30303:30303
       - 30303:30303/udp
