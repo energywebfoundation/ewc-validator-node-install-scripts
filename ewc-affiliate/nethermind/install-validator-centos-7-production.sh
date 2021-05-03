@@ -3,52 +3,71 @@
 # Make the script exit on any error
 set -e
 set -o errexit
+DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-PARITY_VERSION="parity/parity:v2.5.13-stable"
-PARITY_CHKSUM="sha256:36be05aeb6426b5615e2d6b71c9590dbc4a4d03ae7bcfa53edefdaeef28d3f41"
+export NETHERMIND_VERSION="nethermind/nethermind:1.10.66"
+NETHERMIND_CHKSUM="sha256:ad2d971db70076814ee8c0133222a15ae381e55ead2695a17f5c516a58e2ca32"
 
-PARITYTELEMETRY_VERSION="1.1.0"
-PARITYTELEMETRY_CHKSUM="sha256:00e3a14c5e9c6629eedfcece86e12599f5813c0f2fc075689efa1233aa0cfef7"
+export NETHERMINDTELEMETRY_VERSION="1.0.1"
+NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
 
-TELEGRAF_VERSION="1.9.4"
-TELEGRAF_CHKSUM="d2403d2c31806470d321c67443684549d4926badbb6cc4f0f64f9f4d997f3eec  telegraf-1.9.4-1.x86_64.rpm"
+TELEGRAF_VERSION="1.15.2"
+TELEGRAF_CHKSUM="9857e82aaac65660afb9eaf93384fadc0fc5c108077e67ab12d0ed8e5c644924  telegraf-1.15.2-1.x86_64.rpm"
 
-# Chain/Parity configuration
+# Chain/Nethermind configuration
+export CHAINNAME="energyweb"
+export CHAINNAMETELEGRAF="energywebchain"
+
 BLOCK_GAS="8000000"
-CHAINNAME="EnergyWebChain"
 CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/EnergyWebChain.json"
+NLOG_CONFIG="https://raw.githubusercontent.com/NethermindEth/nethermind/master/src/Nethermind/Nethermind.Runner/NLog.config"
 
-KEY_SEED="0x$(openssl rand -hex 32)"
 # Try to guess the current primary network interface
 NETIF="$(ip route | grep default | awk '{print $5}')"
-CHAINNAMELOWER="$(echo $CHAINNAME | awk '{print tolower($0)}')"
 
 # Install system updates and required tools and dependencies
 echo "Installing updates"
-systemctl disable firewalld || true
-systemctl stop firewalld || true
 yum -y install epel-release
 yum -y update
-yum -y install iptables-services jq curl expect wget bind-utils policycoreutils-python
-#apt-get install -y net-tools iptables-persistent debsums chkrootkit
+yum -y install iptables-services jq curl expect wget bind-utils policycoreutils-python firewalld moreutils
+
+systemctl disable firewalld
+systemctl stop firewalld
 
 # Collecting information from the user
 
-# Get external IP from OpenDNS
-EXTERNAL_IP="$(dig @resolver1.opendns.com ANY myip.opendns.com +short)"
-COMPANY_NAME="validator-$EXTERNAL_IP"
+# Get external IP
+if EXTERNAL_IP=$(curl --fail -s -m 2 http://ipv4.icanhazip.com); then
+    echo Public IP: $EXTERNAL_IP
+elif EXTERNAL_IP=$(curl --fail -s -m 2 http://checkip.amazonaws.com); then
+    echo Public IP: $EXTERNAL_IP
+elif EXTERNAL_IP=$(curl --fail -s -m 2 http://ipinfo.io/ip); then
+    echo Public IP: $EXTERNAL_IP
+elif EXTERNAL_IP=$(curl --fail -s -m 2 http://api.ipify.org); then
+    echo Public IP: $EXTERNAL_IP
+else
+    echo Failed while detecting public IP address
+fi;
 
-if [ ! "$1" == "--auto" ];
-then
+if [ ! "$1" == "--auto" ]; then
 # Show a warning that SSH login is restriced after install finishes
 whiptail --backtitle="EWF Genesis Node Installer" --title "Warning" --yes-button "Continue" --no-button "Abort" --yesno "After the installation is finished you can only login through SSH with the current user on port 2222 and the key provided in the next steps." 10 60
 HOMEDIR=$(pwd)
 # Confirm user home directory
 whiptail --backtitle="EWF Genesis Node Installer" --title "Confirm Home Directory" --yesno "Is $(pwd) the normal users home directory?" 8 60
 
-COMPANY_NAME=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Affiliate/Company Name (will be cut to 30 chars)" 8 78 $COMPANY_NAME --title "Node Configuration" 3>&1 1>&2 2>&3)
-KEY_SEED=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Validator account seed (32byte hex with 0x)" 8 78 $KEY_SEED --title "Node Configuration" 3>&1 1>&2 2>&3)
+until [[ -n "$COMPANY_NAME" ]]; do
+	      COMPANY_NAME=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Affiliate/Company Name (will be cut to 30 chars)" 8 78 $COMPANY_NAME --title "Node Configuration" 3>&1 1>&2 2>&3)
+        exitstatus=$?
+        if [[ $exitstatus = 0 ]]; then
+                echo "Affiliate/Company name has been set to: " $COMPANY_NAME
+        else
+                echo "User has cancelled the prompt."
+                break;
+        fi
+done
+
 EXTERNAL_IP=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts public IP" 8 78 $EXTERNAL_IP --title "Connectivity" 3>&1 1>&2 2>&3)
 NETIF=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts primary network interface" 8 78 $NETIF --title "Connectivity" 3>&1 1>&2 2>&3)
 fi
@@ -87,12 +106,11 @@ systemctl restart docker
 
 # Install docker-compose
 echo "install compose"
-curl -L "https://github.com/docker/compose/releases/download/1.23.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
+curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
 chmod +x /usr/bin/docker-compose
 
 # Install the Telegrad telemetry collector
 echo "Install Telegraf..."
-#wget https://dl.influxdata.com/telegraf/releases/telegraf_$TELEGRAF_VERSION-1_amd64.deb
 wget https://dl.influxdata.com/telegraf/releases/telegraf-$TELEGRAF_VERSION-1.x86_64.rpm
 
 # Verify
@@ -111,6 +129,7 @@ service telegraf stop
 
 # Prepare and pull docker images and verify their checksums
 echo "Prepare Docker..."
+
 mkdir -p ~/.docker
 cat > ~/.docker/config.json << EOF
 {
@@ -119,19 +138,19 @@ cat > ~/.docker/config.json << EOF
     }
 }
 EOF
+docker pull $NETHERMIND_VERSION
 
 # verify image
-docker pull $PARITY_VERSION
-IMGHASH="$(docker image inspect $PARITY_VERSION|jq -r '.[0].Id')"
-if [ "$PARITY_CHKSUM" != "$IMGHASH" ]; then
-  echo "ERROR: Unable to verify parity docker image. Checksum missmatch."
+IMGHASH="$(docker image inspect $NETHERMIND_VERSION|jq -r '.[0].Id')"
+if [ "$NETHERMIND_CHKSUM" != "$IMGHASH" ]; then
+  echo "ERROR: Unable to verify nethermind docker image. Checksum missmatch."
   exit -1;
 fi
 
-docker pull energyweb/parity-telemetry:$PARITYTELEMETRY_VERSION
-IMGHASH="$(docker image inspect energyweb/parity-telemetry:$PARITYTELEMETRY_VERSION|jq -r '.[0].Id')"
-if [ "$PARITYTELEMETRY_CHKSUM" != "$IMGHASH" ]; then
-  echo "ERROR: Unable to verify parity-telemetry docker image. Checksum missmatch."
+docker pull nethermindeth/nethermind-telemetry:$NETHERMINDTELEMETRY_VERSION
+IMGHASH="$(docker image inspect nethermindeth/nethermind-telemetry:$NETHERMINDTELEMETRY_VERSION|jq -r '.[0].Id')"
+if [ "$NETHERMINDTELEMETRY_CHKSUM" != "$IMGHASH" ]; then
+  echo "ERROR: Unable to verify nethermind-telemetry docker image. Checksum missmatch."
   exit -1;
 fi
 
@@ -139,23 +158,15 @@ fi
 mkdir docker-stack
 chmod 750 docker-stack
 cd docker-stack
-mkdir config
-mkdir chain-data
-
-touch config/peers
-
-chown 1000:1000 chain-data
-chmod 777 chain-data
-
-# Prepare the parity client
-# Creates 2 config one with siging enabled and one without
-writeParityConfig
-
-cp config/parity-non-signing.toml config/parity-signing.toml
+mkdir chainspec
+mkdir database
+mkdir configs
+mkdir logs
+mkdir keystore
 
 echo "Fetch Chainspec..."
 # TODO: replace with chainspec location
-wget $CHAINSPEC_URL -O config/chainspec.json
+wget $CHAINSPEC_URL -O chainspec/energyweb.json
 
 echo "Creating Account..."
 
@@ -165,60 +176,55 @@ PASSWORD="$(openssl rand -hex 32)"
 echo "$PASSWORD" > .secret
 chmod 400 .secret
 chown 1000:1000 .secret
+mv .secret keystore/.secret
 
-# Launch oneshot docker
-docker run -d --name parity-keygen \
-    -p 127.0.0.1:8545:8545 \
-    -v ${XPATH}/chain-data/:/home/parity/.local/share/io.parity.ethereum/ \
-    -v ${XPATH}/config:/parity/config:ro ${PARITY_VERSION} \
-    --config /parity/config/parity-non-signing.toml --jsonrpc-apis=parity_accounts
-
-# Wait for parity to sort itself out
-sleep 20
-
+docker run -d --network host --name nethermind \
+    -v ${XPATH}/keystore/:/nethermind/keystore \
+    ${NETHERMIND_VERSION} --config ${CHAINNAME} --Init.EnableUnsecuredDevWallet true --JsonRpc.Enabled true
+    
 generate_account_data() 
 {
 cat << EOF
-{ "method": "parity_newAccountFromSecret", "params": ["$KEY_SEED","$PASSWORD"], "id": 1, "jsonrpc": "2.0" }
+{ "method": "personal_newAccount", "params": ["$PASSWORD"], "id": 1, "jsonrpc": "2.0" }
 EOF
 }
+
+echo "Waiting 45 sec for nethermind to come up and create an account..."
+sleep 45
 # Send request to create account from seed
-ADDR=`curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data "$(generate_account_data)" | jq -r '.result'`
+ADDR=`curl --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data "$(generate_account_data)" | jq -r '.result'`
 
 echo "Account created: $ADDR"
-INFLUX_USER="$(echo $ADDR | cut -c -20)"
+INFLUX_USER=${ADDR:2} # cutting 0x prefix
 INFLUX_PASS="$(openssl rand -hex 16)"
 
-# got the key now discard of the parity instance
-docker stop parity-keygen
-docker rm -f parity-keygen
 
-PARITY_KEY_FILE="$(ls -1 ./chain-data/keys/$CHAINNAME/|grep UTC|head -n1)"
+# got the key now discard of the nethermind instance
+docker stop nethermind
+docker rm -f nethermind
 
-cat >> config/parity-signing.toml << EOF
-engine_signer = "$ADDR"
+writeNethermindConfig
+NETHERMIND_KEY_FILE="$(ls -1 ./keystore/|grep UTC|tail -n1)"
 
-[account]
-password = ["/parity/authority.pwd"]
-keys_iterations = 10240
-EOF
-chmod 644 config/parity-signing.toml
+# Prepare nethermind telemetry pipe
+mkfifo /var/spool/nethermind.sock
+chown telegraf /var/spool/nethermind.sock
 
-# Prepare parity telemetry pipe
-mkfifo /var/spool/parity.sock
-chown telegraf /var/spool/parity.sock
-# touch the blockfile to avoid docker creating a dir
-touch config/nc-lastblock.txt
+# Write NLog config file
+wget $NLOG_CONFIG -O NLog.config
+setJsonRpcLogsLevelToError
+
 # Write the docker-compose file to disk
 writeDockerCompose
 
 # start everything up
 docker-compose up -d
 
-# Collect the enode from parity over RPC
-echo "Waiting 30 sec for parity to come up and generate the enode..."
-sleep 30
-ENODE=`curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data '{ "method": "parity_enode", "params": [], "id": 1, "jsonrpc": "2.0" }' | jq -r '.result'`
+# Collect the enode from nethermind over RPC
+
+echo "Waiting 45 sec for nethermind to come up and generate the enode..."
+sleep 45
+ENODE=`curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data '{ "method": "net_localEnode", "params": [], "id": 1, "jsonrpc": "2.0" }' | jq -r '.result'`
 
 # Now all information is complete to write the telegraf file
 writeTelegrafConfig
@@ -254,8 +260,8 @@ cd /opt/
 wget https://downloads.cisofy.com/lynis/lynis-2.7.1.tar.gz
 tar xvzf lynis-2.7.1.tar.gz
 mv lynis /usr/local/
-ln -s /usr/local/lynis/lynis /usr/local/bin/lynis
-/usr/local/bin/lynis audit system 
+ln -s /usr/local/lynis/lynis /usr/bin/lynis
+lynis audit system
 
 
 # Print install summary
@@ -274,53 +280,53 @@ cat install-summary.txt
 }
 
 ## Files that get created
-      
 
 writeDockerCompose() {
 cat > docker-compose.yml << 'EOF'
-version: '2.0'
+version: '3.5'
 services:
-  parity:
-    image: ${PARITY_VERSION}
+  nethermind:
+    image: ${NETHERMIND_VERSION}
     restart: always
     command:
-      --config /parity/config/parity-${IS_SIGNING}.toml
-      --nat extip:${EXTERNAL_IP}
+      --config ${CHAINNAME}
     volumes:
-      - ./config:/parity/config:ro
-      - ./chain-data:/home/parity/.local/share/io.parity.ethereum/
-      - ./.secret:/parity/authority.pwd:ro
+      - ./configs:/nethermind/configs:ro
+      - ./database:/nethermind/nethermind_db
+      - ./keystore:/nethermind/keystore
+      - ./NLog.config:/nethermind/NLog.config
+      - ./logs:/nethermind/logs
     ports:
-      - 30303:30303 
+      - 30303:30303
       - 30303:30303/udp
-      - 127.0.0.1:8545:8545
+      - 8545:8545
 
-  parity-telemetry:
-    image: energyweb/parity-telemetry:${PARITYTELEMETRY_VERSION}
+  nethermind-telemetry:
+    image: nethermindeth/nethermind-telemetry:${NETHERMINDTELEMETRY_VERSION}
     restart: always
     environment:
-      - WSURL=ws://parity:8546
-      - HTTPURL=http://parity:8545
-      - PIPENAME=/var/spool/parity.sock
+      - WSURL=ws://nethermind:8545/ws/json-rpc
+      - HTTPURL=http://nethermind:8545
+      - PIPENAME=/var/spool/nethermind.sock
     volumes:
-      - /var/spool/parity.sock:/var/spool/parity.sock
+      - /var/spool/nethermind.sock:/var/spool/nethermind.sock
 EOF
 
 cat > .env << EOF
 VALIDATOR_ADDRESS=$ADDR
 EXTERNAL_IP=$EXTERNAL_IP
-PARITY_VERSION=$PARITY_VERSION
-PARITYTELEMETRY_VERSION=$PARITYTELEMETRY_VERSION
-IS_SIGNING=signing
-PARITY_KEY_FILE=./chain-data/keys/${CHAINNAME}/${PARITY_KEY_FILE}
+NETHERMIND_VERSION=$NETHERMIND_VERSION
+NETHERMINDTELEMETRY_VERSION=$NETHERMINDTELEMETRY_VERSION
+IS_SIGNING=true
+NETHERMIND_KEY_FILE=./keystore/${NETHERMIND_KEY_FILE}
 CHAINSPEC_CHKSUM=$CHAINSPEC_CHKSUM
-CHAINSPEC_URL=https://example.com
-PARITY_CHKSUM=$PARITY_CHKSUM
+CHAINSPEC_URL=$CHAINSPEC_URL
+NETHERMIND_CHKSUM=$NETHERMIND_CHKSUM
+CHAINNAME=$CHAINNAME
 EOF
 
 chmod 640 .env
 chmod 640 docker-compose.yml
-
 }
 
 writeSShConfig() {
@@ -343,7 +349,7 @@ Subsystem	sftp	/usr/lib/openssh/sftp-server
 EOF
 }
 
-writeTelegrafConfig() {
+function writeTelegrafConfig() {
 cat > /etc/telegraf/telegraf.conf << EOF
 [global_tags]
   affiliate = "$COMPANY_NAME"
@@ -365,8 +371,8 @@ cat > /etc/telegraf/telegraf.conf << EOF
   hostname = "$HOSTNAME"
   omit_hostname = false
 [[outputs.influxdb]]
-  urls = ["https://$CHAINNAMELOWER-influx-ingress.energyweb.org/"]
-  database = "telemetry_$CHAINNAMELOWER"
+  urls = ["https://$CHAINNAMETELEGRAF-influx-ingress.energyweb.org/"]
+  database = "telemetry_$CHAINNAMETELEGRAF"
   skip_database_creation = true
   username = "$INFLUX_USER"
   password = "$INFLUX_PASS"
@@ -387,7 +393,7 @@ cat > /etc/telegraf/telegraf.conf << EOF
     endpoint = "unix:///var/run/docker.sock"
 [[inputs.net]]
 [[inputs.tail]]
-   files = ["/var/spool/parity.sock"]
+   files = ["/var/spool/nethermind.sock"]
    pipe = true
    data_format = "json"
 
@@ -395,7 +401,7 @@ cat > /etc/telegraf/telegraf.conf << EOF
    json_time_key = "timekey"
    json_time_format = "unix_ms"
    json_string_fields = ["client","blockHash"]
-   name_override = "parity"
+   name_override = "nethermind"
 EOF
 }
 
@@ -412,64 +418,83 @@ function writeDockerConfig() {
 EOF
 }
 
-function writeParityConfig() {
-cat > config/parity-non-signing.toml << EOF
-[parity]
-chain = "/parity/config/chainspec.json"
-auto_update = "none"
-release_track = "current"
-no_download = true
-no_persistent_txqueue = true
-
-[ui]
-disable = true
-
-[rpc]
-disable = false
-port = 8545
-interface = "0.0.0.0"
-cors = []
-apis = ["eth", "net", "parity", "web3"]
-
-[websockets]
-disable = false
-interface = "0.0.0.0"
-
-[ipc]
-disable = true
-
-[secretstore]
-disable = true
-
-[network]
-port = 30303
-min_peers = 25
-max_peers = 50
-discovery = true
-warp = false
-allow_ips = "all"
-snapshot_peers = 0
-max_pending_peers = 64
-no_serve_light = true
-
-[footprint]
-db_compaction = "ssd"
-
-[snapshots]
-disable_periodic = true
-
-[mining]
-force_sealing = true
-usd_per_tx = "0.000000000000000001"
-usd_per_eth = "1"
-min_gas_price = 1
-price_update_period = "hourly"
-gas_cap = "$BLOCK_GAS"
-gas_floor_target = "$BLOCK_GAS"
-tx_gas_limit = "$BLOCK_GAS"
-extra_data = "$COMPANY_NAME"
+function writeNethermindConfig() {
+cat > configs/energyweb.cfg << EOF
+{
+  "Init": {      
+    "WebSocketsEnabled": true,
+    "StoreReceipts" : true,
+    "IsMining": true,
+    "ChainSpecPath": "chainspec/energyweb.json",
+    "GenesisHash": "0x0b6d3e680af2fc525392c720666cce58e3d8e6fe75ba4b48cb36bcc69039229b",
+    "BaseDbPath": "nethermind_db/energyweb",
+    "LogFileName": "energyweb.logs.txt",
+    "MemoryHint": 256000000
+  },
+  "Network": {
+    "DiscoveryPort": 30303,
+    "P2PPort": 30303,
+    "ActivePeersMaxCount": 25
+  },
+  "TxPool": {
+      "Size": 512
+  },
+  "JsonRpc": {
+    "Enabled": true,
+    "TracerTimeout": 20000,
+    "Host": "0.0.0.0",
+    "Port": 8545    
+  },
+  "Db": {
+    "CacheIndexAndFilterBlocks": false
+  },
+  "Sync": {
+    "FastSync": true,
+    "PivotNumber": 11610000,
+    "PivotHash": "0x83c49ea5ef801f1337e14de8855d6b0373c8ffb89733cbb4f98bebe683f1e8a2",
+    "PivotTotalDifficulty": "3950678279952095560809779192282828934668696908",
+    "FastBlocks" : true,
+    "UseGethLimitsInFastBlocks" : false,
+    "FastSyncCatchUpHeightDelta": 10000000000
+  },
+  "EthStats": {
+    "Enabled": false,
+    "Server": "ws://localhost:3000/api",
+    "Name": "$COMPANY_NAME",
+    "Secret": "secret",
+    "Contact": "hello@nethermind.io"
+  },
+  "KeyStore": {
+    "PasswordFiles": ["keystore/.secret"],
+    "UnlockAccounts": ["$ADDR"],
+    "BlockAuthorAccount": "$ADDR"
+  },
+  "Metrics": {
+    "NodeName": "$COMPANY_NAME",
+    "Enabled": false,
+    "PushGatewayUrl": "http://localhost:9091/metrics",
+    "IntervalSeconds": 5
+  },
+  "Seq": {
+    "MinLevel": "Off",
+    "ServerUrl": "http://localhost:5341",
+    "ApiKey": ""
+  },
+  "Mining": {
+    "TargetBlockGasLimit": $BLOCK_GAS
+  },
+  "Aura": {
+    "ForceSealing": true
+  }
+}
 EOF
-chmod 644 config/parity-non-signing.toml
+chmod 644 configs/energyweb.cfg
+}
+
+function setJsonRpcLogsLevelToError() {
+  sed -i '59s/.*/        <logger name="JsonRpc.*" minlevel="Error" writeTo="file-async"\/>/' NLog.config
+  sed -i '60s/.*/        <logger name="JsonRpc.*" minlevel="Error" writeTo="auto-colored-console-async"\/>/' NLog.config
+  sed -i '61s/.*/        <logger name="JsonRpc.*" final="true"\/>/' NLog.config
 }
 
 main

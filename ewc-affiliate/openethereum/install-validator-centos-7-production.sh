@@ -16,8 +16,8 @@ TELEGRAF_CHKSUM="d2403d2c31806470d321c67443684549d4926badbb6cc4f0f64f9f4d997f3ee
 
 # Chain/Parity configuration
 BLOCK_GAS="8000000"
-CHAINNAME="Volta"
-CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/Volta.json"
+CHAINNAME="EnergyWebChain"
+CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/EnergyWebChain.json"
 
 KEY_SEED="0x$(openssl rand -hex 32)"
 # Try to guess the current primary network interface
@@ -274,6 +274,7 @@ cat install-summary.txt
 }
 
 ## Files that get created
+      
 
 writeDockerCompose() {
 cat > docker-compose.yml << 'EOF'
