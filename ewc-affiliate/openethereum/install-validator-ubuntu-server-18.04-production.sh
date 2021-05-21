@@ -455,7 +455,7 @@ max_pending_peers = 64
 db_compaction = "ssd"
 
 [snapshots]
-disable_periodic = true
+enable = false
 
 [mining]
 force_sealing = true
