@@ -179,7 +179,7 @@ chown 1000:1000 .secret
 # Launch oneshot docker
 docker run -d --name parity-keygen \
     -p 127.0.0.1:8545:8545 \
-    -v ${XPATH}/chain-data/:/home/parity/.local/share/io.parity.ethereum/ \
+    -v ${XPATH}/chain-data/:/home/openethereum/.local/share/io.parity.ethereum/ \
     -v ${XPATH}/config:/parity/config:ro ${PARITY_VERSION} \
     --config /parity/config/parity-non-signing.toml --jsonrpc-apis=parity_accounts
 
