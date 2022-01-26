@@ -6,8 +6,8 @@ set -o errexit
 DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.10.66"
-NETHERMIND_CHKSUM="sha256:ad2d971db70076814ee8c0133222a15ae381e55ead2695a17f5c516a58e2ca32"
+export NETHERMIND_VERSION="nethermind/nethermind:1.11.7"
+NETHERMIND_CHKSUM="sha256:c0e6c57336d0fc8c4f3459b1c94d1d89524b76596c7b2fead5d9b00a8d0a7705"
 
 export NETHERMINDTELEMETRY_VERSION="1.0.1"
 NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
@@ -181,8 +181,8 @@ mv .secret keystore/.secret
 docker run -d --network host --name nethermind \
     -v ${XPATH}/keystore/:/nethermind/keystore \
     ${NETHERMIND_VERSION} --config ${CHAINNAME} --Init.EnableUnsecuredDevWallet true --JsonRpc.Enabled true
-    
-generate_account_data() 
+
+generate_account_data()
 {
 cat << EOF
 { "method": "personal_newAccount", "params": ["$PASSWORD"], "id": 1, "jsonrpc": "2.0" }
@@ -421,7 +421,7 @@ EOF
 function writeNethermindConfig() {
 cat > configs/energyweb.cfg << EOF
 {
-  "Init": {      
+  "Init": {
     "WebSocketsEnabled": true,
     "StoreReceipts" : true,
     "IsMining": true,
@@ -443,7 +443,7 @@ cat > configs/energyweb.cfg << EOF
     "Enabled": true,
     "TracerTimeout": 20000,
     "Host": "0.0.0.0",
-    "Port": 8545    
+    "Port": 8545
   },
   "Db": {
     "CacheIndexAndFilterBlocks": false
