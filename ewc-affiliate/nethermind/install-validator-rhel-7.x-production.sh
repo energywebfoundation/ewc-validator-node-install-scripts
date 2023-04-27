@@ -426,9 +426,9 @@ cat > configs/energyweb.cfg << EOF
     "WebSocketsEnabled": true,
     "StoreReceipts" : true,
     "IsMining": true,
-    "PivotNumber": 22570000,
-    "PivotHash": "0xe253a21aca67b312f20c405fdef0d90c8c7894517f4c5da20e17d6cfea303d8a",
-    "PivotTotalDifficulty": "8020455388326519583831739497166776743658171427",
+    "ChainSpecPath": "chainspec/energyweb.json",
+    "GenesisHash": "0x0b6d3e680af2fc525392c720666cce58e3d8e6fe75ba4b48cb36bcc69039229b",
+    "BaseDbPath": "nethermind_db/energyweb",
     "LogFileName": "energyweb.logs.txt",
     "MemoryHint": 768000000
   },
