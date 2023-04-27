@@ -6,8 +6,8 @@ set -o errexit
 DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.11.7"
-NETHERMIND_CHKSUM="sha256:c0e6c57336d0fc8c4f3459b1c94d1d89524b76596c7b2fead5d9b00a8d0a7705"
+export NETHERMIND_VERSION="nethermind/nethermind:1.17.4"
+NETHERMIND_CHKSUM="sha256:299497fc3bb279612cb0aed4b7f08e7abc5396bffdbce4899fd0b0c84302a45b"
 
 export NETHERMINDTELEMETRY_VERSION="1.0.1"
 NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
@@ -426,11 +426,11 @@ cat > configs/energyweb.cfg << EOF
     "WebSocketsEnabled": true,
     "StoreReceipts" : true,
     "IsMining": true,
-    "PivotNumber": 11610000,
-    "PivotHash": "0x83c49ea5ef801f1337e14de8855d6b0373c8ffb89733cbb4f98bebe683f1e8a2",
-    "PivotTotalDifficulty": "3950678279952095560809779192282828934668696908",
+    "PivotNumber": 22570000,
+    "PivotHash": "0xe253a21aca67b312f20c405fdef0d90c8c7894517f4c5da20e17d6cfea303d8a",
+    "PivotTotalDifficulty": "8020455388326519583831739497166776743658171427",
     "LogFileName": "energyweb.logs.txt",
-    "MemoryHint": 256000000
+    "MemoryHint": 768000000
   },
   "Network": {
     "DiscoveryPort": 30303,
@@ -442,7 +442,7 @@ cat > configs/energyweb.cfg << EOF
   },
   "JsonRpc": {
     "Enabled": true,
-    "TracerTimeout": 20000,
+    "Timeout": 20000,
     "Host": "0.0.0.0",
     "Port": 8545
   },
@@ -451,7 +451,7 @@ cat > configs/energyweb.cfg << EOF
   },
   "Sync": {
     "FastSync": true,
-    "PivotNumber": 9140000,
+    "PivotNumber": 23570000,
     "PivotHash": "0xaa15525206343f64bac5ce501c2324d5a477d69445610d417e34d34220a67d31",
     "PivotTotalDifficulty": "3110180833657377556055243911926361452377382254",
     "FastBlocks" : true,

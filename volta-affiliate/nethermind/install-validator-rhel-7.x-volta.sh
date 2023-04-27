@@ -6,8 +6,8 @@ set -o errexit
 DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.11.7"
-NETHERMIND_CHKSUM="sha256:c0e6c57336d0fc8c4f3459b1c94d1d89524b76596c7b2fead5d9b00a8d0a7705"
+export NETHERMIND_VERSION="nethermind/nethermind:1.17.4"
+NETHERMIND_CHKSUM="sha256:299497fc3bb279612cb0aed4b7f08e7abc5396bffdbce4899fd0b0c84302a45b"
 
 export NETHERMINDTELEMETRY_VERSION="1.0.1"
 NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
@@ -428,7 +428,7 @@ cat > configs/volta.cfg << EOF
     "GenesisHash": "0xebd8b413ca7b7f84a8dd20d17519ce2b01954c74d94a0a739a3e416abe0e43e5",
     "BaseDbPath": "nethermind_db/volta",
     "LogFileName": "volta.logs.txt",
-    "MemoryHint": 256000000
+    "MemoryHint": 768000000
   },
   "Network": {
     "DiscoveryPort": 30303,
@@ -440,7 +440,7 @@ cat > configs/volta.cfg << EOF
   },
   "JsonRpc": {
     "Enabled": true,
-    "TracerTimeout": 20000,
+    "Timeout": 20000,
     "Host": "0.0.0.0",
     "Port": 8545
   },
@@ -449,9 +449,9 @@ cat > configs/volta.cfg << EOF
   },
   "Sync": {
     "FastSync": true,
-    "PivotNumber": 11610000,
-    "PivotHash": "0xf3906f1a1aa8eea0bee34590db4b84b17893aa070fa8b1e3e207a4eb2f4092ed",
-    "PivotTotalDifficulty": "3950678279952095560809779192282828934668697622",
+    "PivotNumber": 22570000,
+    "PivotHash": "0x702b56e3f6ece178c3fcadc4c10c66088aa17ef282df212c15fb91a50a4306be",
+    "PivotTotalDifficulty": "7680173021405581120368364889735008532203175805",
     "FastBlocks" : true,
     "UseGethLimitsInFastBlocks" : false,
     "FastSyncCatchUpHeightDelta": 10000000000
