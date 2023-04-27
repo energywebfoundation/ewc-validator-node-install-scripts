@@ -452,8 +452,8 @@ cat > configs/energyweb.cfg << EOF
   "Sync": {
     "FastSync": true,
     "PivotNumber": 23570000,
-    "PivotHash": "0xaa15525206343f64bac5ce501c2324d5a477d69445610d417e34d34220a67d31",
-    "PivotTotalDifficulty": "3110180833657377556055243911926361452377382254",
+    "PivotHash": "0xe253a21aca67b312f20c405fdef0d90c8c7894517f4c5da20e17d6cfea303d8a",
+    "PivotTotalDifficulty": "8020455388326519583831739497166776743658171427",
     "FastBlocks" : true,
     "UseGethLimitsInFastBlocks" : false,
     "FastSyncCatchUpHeightDelta": 10000000000
