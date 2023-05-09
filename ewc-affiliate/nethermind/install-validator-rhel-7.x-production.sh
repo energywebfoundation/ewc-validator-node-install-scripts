@@ -6,8 +6,8 @@ set -o errexit
 DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.17.4"
-NETHERMIND_CHKSUM="sha256:299497fc3bb279612cb0aed4b7f08e7abc5396bffdbce4899fd0b0c84302a45b"
+export NETHERMIND_VERSION="nethermind/nethermind:1.18.0"
+NETHERMIND_CHKSUM="sha256:1af26d435842dfd830f1f59823e4f368cf3472666afe8e7cc893e5cadcb298fb"
 
 export NETHERMINDTELEMETRY_VERSION="1.0.1"
 NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
@@ -446,14 +446,11 @@ cat > configs/energyweb.cfg << EOF
     "Host": "0.0.0.0",
     "Port": 8545
   },
-  "Db": {
-    "CacheIndexAndFilterBlocks": false
-  },
   "Sync": {
     "FastSync": true,
-    "PivotNumber": 23570000,
-    "PivotHash": "0xe253a21aca67b312f20c405fdef0d90c8c7894517f4c5da20e17d6cfea303d8a",
-    "PivotTotalDifficulty": "8020455388326519583831739497166776743658171427",
+    "PivotNumber": 23850000,
+    "PivotHash": "0xc5d6f496e929f6bdda9bbb08c6cef82f5aac1ae536afa1c8c09b53c42d8bebda",
+    "PivotTotalDifficulty": "8115734451064382353601484387247671842865272564",
     "FastBlocks" : true,
     "UseGethLimitsInFastBlocks" : false,
     "FastSyncCatchUpHeightDelta": 10000000000

@@ -6,8 +6,8 @@ set -o errexit
 DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.17.4"
-NETHERMIND_CHKSUM="sha256:299497fc3bb279612cb0aed4b7f08e7abc5396bffdbce4899fd0b0c84302a45b"
+export NETHERMIND_VERSION="nethermind/nethermind:1.18.0"
+NETHERMIND_CHKSUM="sha256:1af26d435842dfd830f1f59823e4f368cf3472666afe8e7cc893e5cadcb298fb"
 
 export NETHERMINDTELEMETRY_VERSION="1.0.1"
 NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
@@ -451,14 +451,11 @@ cat > configs/volta.cfg << EOF
     "Host": "0.0.0.0",
     "Port": 8545
   },
-  "Db": {
-    "CacheIndexAndFilterBlocks": false
-  },
   "Sync": {
     "FastSync": true,
-    "PivotNumber": 22570000,
-    "PivotHash": "0x702b56e3f6ece178c3fcadc4c10c66088aa17ef282df212c15fb91a50a4306be",
-    "PivotTotalDifficulty": "7680173021405581120368364889735008532203175805",
+    "PivotNumber": 22820000,
+    "PivotHash": "0xcda62f56b3c0bf91421446f2341bfba9e6dacafe012a7173d8e071c6a7e17bb0",
+    "PivotTotalDifficulty": "7765243613135815736234208541592950585066626012",
     "FastBlocks" : true,
     "UseGethLimitsInFastBlocks" : false,
     "FastSyncCatchUpHeightDelta": 10000000000
