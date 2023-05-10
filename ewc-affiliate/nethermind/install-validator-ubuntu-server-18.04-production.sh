@@ -6,8 +6,8 @@ set -o errexit
 DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.11.7"
-NETHERMIND_CHKSUM="sha256:c0e6c57336d0fc8c4f3459b1c94d1d89524b76596c7b2fead5d9b00a8d0a7705"
+export NETHERMIND_VERSION="nethermind/nethermind:1.18.0"
+NETHERMIND_CHKSUM="sha256:1af26d435842dfd830f1f59823e4f368cf3472666afe8e7cc893e5cadcb298fb"
 
 export NETHERMINDTELEMETRY_VERSION="1.0.1"
 NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
@@ -436,7 +436,7 @@ cat > configs/energyweb.cfg << EOF
     "GenesisHash": "0x0b6d3e680af2fc525392c720666cce58e3d8e6fe75ba4b48cb36bcc69039229b",
     "BaseDbPath": "nethermind_db/energyweb",
     "LogFileName": "energyweb.logs.txt",
-    "MemoryHint": 256000000
+    "MemoryHint": 768000000
   },
   "Network": {
     "DiscoveryPort": 30303,
@@ -448,18 +448,15 @@ cat > configs/energyweb.cfg << EOF
   },
   "JsonRpc": {
     "Enabled": true,
-    "TracerTimeout": 20000,
+    "Timeout": 20000,
     "Host": "0.0.0.0",
     "Port": 8545
   },
-  "Db": {
-    "CacheIndexAndFilterBlocks": false
-  },
   "Sync": {
     "FastSync": true,
-    "PivotNumber": 11610000,
-    "PivotHash": "0x83c49ea5ef801f1337e14de8855d6b0373c8ffb89733cbb4f98bebe683f1e8a2",
-    "PivotTotalDifficulty": "3950678279952095560809779192282828934668696908",
+    "PivotNumber": 23850000,
+    "PivotHash": "0xc5d6f496e929f6bdda9bbb08c6cef82f5aac1ae536afa1c8c09b53c42d8bebda",
+    "PivotTotalDifficulty": "8115734451064382353601484387247671842865272564",
     "FastBlocks" : true,
     "UseGethLimitsInFastBlocks" : false,
     "FastSyncCatchUpHeightDelta": 10000000000
