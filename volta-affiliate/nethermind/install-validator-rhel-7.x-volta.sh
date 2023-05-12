@@ -476,7 +476,7 @@ cat > configs/volta.cfg << EOF
     "ServerUrl": "http://localhost:5341",
     "ApiKey": ""
   },
-  "Mining": {
+  "Blocks": {
     "TargetBlockGasLimit": $BLOCK_GAS
   },
   "Aura": {
