@@ -206,7 +206,7 @@ chown telegraf /var/spool/nethermind.sock
 
 # Write NLog config file
 wget $NLOG_CONFIG -O NLog.config
-setJsonRpcLogsLevelToError
+# setJsonRpcLogsLevelToError
 
 # Write the docker-compose file to disk
 writeDockerCompose
@@ -483,6 +483,7 @@ EOF
 chmod 644 configs/volta.cfg
 }
 
+# To Do: Line numbers need to be updated.
 function setJsonRpcLogsLevelToError() {
   sed -i '59s/.*/        <logger name="JsonRpc.*" minlevel="Error" writeTo="file-async"\/>/' NLog.config
   sed -i '60s/.*/        <logger name="JsonRpc.*" minlevel="Error" writeTo="auto-colored-console-async"\/>/' NLog.config
