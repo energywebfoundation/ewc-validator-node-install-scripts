@@ -6,8 +6,8 @@ set -o errexit
 export DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.20.1"
-NETHERMIND_CHKSUM="sha256:9833080ac57a9c4935987b3915a289c3402c4366e531d49056deec55e3bd4efa"
+export NETHERMIND_VERSION="nethermind/nethermind:1.21.1"
+NETHERMIND_CHKSUM="sha256:63f626f9c008ffb4f49cc8b0078234ece5ff7f60599957c41633c8575dbf8984"
 
 export NETHERMINDTELEMETRY_VERSION="1.0.1"
 NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
@@ -17,6 +17,8 @@ TELEGRAF_CHKSUM="9857e82aaac65660afb9eaf93384fadc0fc5c108077e67ab12d0ed8e5c64492
 
 # Chain/Nethermind configuration
 export CHAINNAME="volta"
+
+
 BLOCK_GAS="8000000"
 CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/Volta.json"
 NLOG_CONFIG="https://raw.githubusercontent.com/NethermindEth/nethermind/master/src/Nethermind/Nethermind.Runner/NLog.config"
@@ -96,6 +98,8 @@ echo "Install Docker..."
 
 dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
 dnf -y install docker-ce docker-ce-cli containerd.io
+username_1000=$(getent passwd 1000 | cut -d: -f1)
+usermod -aG docker "$username_1000"
 
 
 # Write docker config
@@ -124,14 +128,16 @@ service telegraf stop
 # Prepare and pull docker images and verify their checksums
 echo "Prepare Docker..."
 
-mkdir -p ~/.docker
-cat > ~/.docker/config.json << EOF
+mkdir -p "$HOMEDIR"/.docker
+cat > "$HOMEDIR"/.docker/config.json << EOF
 {
     "HttpHeaders": {
         "User-Agent": "Docker-Client/24.0.2 (linux)"
     }
 }
 EOF
+chown -R 1000:1000 "$HOMEDIR"/.docker
+chmod -R g+rwx "$HOMEDIR/.docker"
 docker pull $NETHERMIND_VERSION
 
 # verify image
