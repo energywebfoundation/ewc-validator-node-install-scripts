@@ -6,8 +6,8 @@ set -o errexit
 export DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.21.1"
-NETHERMIND_CHKSUM="sha256:63f626f9c008ffb4f49cc8b0078234ece5ff7f60599957c41633c8575dbf8984"
+export NETHERMIND_VERSION="nethermind/nethermind:1.25.4"
+NETHERMIND_CHKSUM="sha256:ca1dbaf99121965397294f225ebb0c1100925cce42a5ce38961e4fd9383e1539"
 
 export NETHERMINDTELEMETRY_VERSION="1.0.1"
 NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
@@ -256,8 +256,8 @@ service iptables save
 
 # run automated post-install audit
 cd /opt/
-wget https://downloads.cisofy.com/lynis/lynis-2.7.1.tar.gz
-tar xvzf lynis-2.7.1.tar.gz
+wget https://downloads.cisofy.com/lynis/lynis-3.1.0.tar.gz
+tar xvzf lynis-3.1.0.tar.gz
 mv lynis /usr/local/
 ln -s /usr/local/lynis/lynis /usr/bin/lynis
 lynis audit system
@@ -447,9 +447,9 @@ cat > configs/energyweb.cfg << EOF
   },
   "Sync": {
     "FastSync": true,
-    "PivotNumber": 24590000,
-    "PivotHash": "0x4c5bec0e71e1d399f48de1ddd6963273e02bccef0593ce26294ef5cdaee8f619",
-    "PivotTotalDifficulty": "8367543402585876816564381596747180319341185475",
+    "PivotNumber": 26940000,
+    "PivotHash": "0x8835983de9578a4355313afd2a43d8eada6f2a4ddbd9c51da103e0d5f53c4d8b",
+    "PivotTotalDifficulty": "9167206964850082205703311924211835616257898274",
     "FastBlocks" : true,
     "UseGethLimitsInFastBlocks" : false,
     "FastSyncCatchUpHeightDelta": 10000000000
@@ -482,6 +482,12 @@ cat > configs/energyweb.cfg << EOF
   },
   "Aura": {
     "ForceSealing": true
+  },
+  "Mining": {
+    "MinGasPrice": 1
+  },
+  "Merge": {
+    "Enabled": false
   }
 }
 EOF
