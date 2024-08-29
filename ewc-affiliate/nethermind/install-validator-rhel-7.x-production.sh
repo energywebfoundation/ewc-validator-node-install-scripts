@@ -3,11 +3,11 @@
 # Make the script exit on any error
 set -e
 set -o errexit
-DEBIAN_FRONTEND=noninteractive
+export DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.18.0"
-NETHERMIND_CHKSUM="sha256:1af26d435842dfd830f1f59823e4f368cf3472666afe8e7cc893e5cadcb298fb"
+export NETHERMIND_VERSION="nethermind/nethermind:1.25.4"
+NETHERMIND_CHKSUM="sha256:ca1dbaf99121965397294f225ebb0c1100925cce42a5ce38961e4fd9383e1539"
 
 export NETHERMINDTELEMETRY_VERSION="1.0.1"
 NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
@@ -39,13 +39,13 @@ systemctl stop firewalld
 
 # Get external IP
 if EXTERNAL_IP=$(curl --fail -s -m 2 http://ipv4.icanhazip.com); then
-    echo Public IP: $EXTERNAL_IP
+    echo Public IP: "$EXTERNAL_IP"
 elif EXTERNAL_IP=$(curl --fail -s -m 2 http://checkip.amazonaws.com); then
-    echo Public IP: $EXTERNAL_IP
+    echo Public IP: "$EXTERNAL_IP"
 elif EXTERNAL_IP=$(curl --fail -s -m 2 http://ipinfo.io/ip); then
-    echo Public IP: $EXTERNAL_IP
+    echo Public IP: "$EXTERNAL_IP"
 elif EXTERNAL_IP=$(curl --fail -s -m 2 http://api.ipify.org); then
-    echo Public IP: $EXTERNAL_IP
+    echo Public IP: "$EXTERNAL_IP"
 else
     echo Failed while detecting public IP address
 fi;
@@ -61,7 +61,7 @@ until [[ -n "$COMPANY_NAME" ]]; do
 	      COMPANY_NAME=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Affiliate/Company Name (will be cut to 30 chars)" 8 78 $COMPANY_NAME --title "Node Configuration" 3>&1 1>&2 2>&3)
         exitstatus=$?
         if [[ $exitstatus = 0 ]]; then
-                echo "Affiliate/Company name has been set to: " $COMPANY_NAME
+                echo "Affiliate/Company name has been set to: " "$COMPANY_NAME"
         else
                 echo "User has cancelled the prompt."
                 break;
@@ -72,7 +72,7 @@ EXTERNAL_IP=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Ente
 NETIF=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts primary network interface" 8 78 $NETIF --title "Connectivity" 3>&1 1>&2 2>&3)
 fi
 
-COMPANY_NAME=$(echo $COMPANY_NAME | cut -c -30)
+COMPANY_NAME=$(echo "$COMPANY_NAME" | cut -c -30)
 
 # Declare a main function. This way we can put all other functions (especially the assert writers) to the bottom.
 main() {
@@ -118,7 +118,7 @@ wget https://dl.influxdata.com/telegraf/releases/telegraf-$TELEGRAF_VERSION-1.x8
 TG_CHK="$(sha256sum telegraf-$TELEGRAF_VERSION-1.x86_64.rpm)"
 if [ "$TELEGRAF_CHKSUM" != "$TG_CHK" ]; then
   echo "ERROR: Unable to verify telegraf package. Checksum missmatch."
-  exit -1;
+  exit 1;
 fi
 
 yum -y localinstall telegraf-$TELEGRAF_VERSION-1.x86_64.rpm
@@ -145,14 +145,14 @@ docker pull $NETHERMIND_VERSION
 IMGHASH="$(docker image inspect $NETHERMIND_VERSION|jq -r '.[0].Id')"
 if [ "$NETHERMIND_CHKSUM" != "$IMGHASH" ]; then
   echo "ERROR: Unable to verify nethermind docker image. Checksum missmatch."
-  exit -1;
+  exit 1;
 fi
 
 docker pull nethermindeth/nethermind-telemetry:$NETHERMINDTELEMETRY_VERSION
 IMGHASH="$(docker image inspect nethermindeth/nethermind-telemetry:$NETHERMINDTELEMETRY_VERSION|jq -r '.[0].Id')"
 if [ "$NETHERMINDTELEMETRY_CHKSUM" != "$IMGHASH" ]; then
   echo "ERROR: Unable to verify nethermind-telemetry docker image. Checksum missmatch."
-  exit -1;
+  exit 1;
 fi
 
 # Create the directory structure
@@ -180,7 +180,7 @@ chown 1000:1000 .secret
 mv .secret keystore/.secret
 
 docker run -d --network host --name nethermind \
-    -v ${XPATH}/keystore/:/nethermind/keystore \
+    -v "${XPATH}"/keystore/:/nethermind/keystore \
     ${NETHERMIND_VERSION} --config ${CHAINNAME} --Init.EnableUnsecuredDevWallet true --JsonRpc.Enabled true
 
 generate_account_data()
@@ -193,7 +193,7 @@ EOF
 echo "Waiting 45 sec for nethermind to come up and create an account..."
 sleep 45
 # Send request to create account from seed
-ADDR=`curl --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data "$(generate_account_data)" | jq -r '.result'`
+ADDR=$(curl --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data "$(generate_account_data)" | jq -r '.result')
 
 echo "Account created: $ADDR"
 INFLUX_USER=${ADDR:2} # cutting 0x prefix
@@ -205,7 +205,7 @@ docker stop nethermind
 docker rm -f nethermind
 
 writeNethermindConfig
-NETHERMIND_KEY_FILE="$(ls -1 ./keystore/|grep UTC|tail -n1)"
+NETHERMIND_KEY_FILE=$(find ./keystore/ -maxdepth 1 -type f -name 'UTC*' -printf '%T@ %p\n' | sort -n | tail -n1 | awk '{print $NF}')
 
 # Prepare nethermind telemetry pipe
 mkfifo /var/spool/nethermind.sock
@@ -213,7 +213,7 @@ chown telegraf /var/spool/nethermind.sock
 
 # Write NLog config file
 wget $NLOG_CONFIG -O NLog.config
-setJsonRpcLogsLevelToError
+# setJsonRpcLogsLevelToError
 
 # Write the docker-compose file to disk
 writeDockerCompose
@@ -225,7 +225,7 @@ docker-compose up -d
 
 echo "Waiting 45 sec for nethermind to come up and generate the enode..."
 sleep 45
-ENODE=`curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data '{ "method": "net_localEnode", "params": [], "id": 1, "jsonrpc": "2.0" }' | jq -r '.result'`
+ENODE=$(curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data '{ "method": "net_localEnode", "params": [], "id": 1, "jsonrpc": "2.0" }' | jq -r '.result')
 
 # Now all information is complete to write the telegraf file
 writeTelegrafConfig
@@ -252,30 +252,31 @@ iptables -A INPUT -i lo -j ACCEPT
 iptables -A INPUT -j FILTERS
 iptables -P INPUT DROP
 
-iptables -A DOCKER-USER -i $NETIF -j FILTERS
+iptables -A DOCKER-USER -i "$NETIF" -j FILTERS
 iptables -A DOCKER-USER -j RETURN
 service iptables save
 
 # run automated post-install audit
 cd /opt/
-wget https://downloads.cisofy.com/lynis/lynis-2.7.1.tar.gz
-tar xvzf lynis-2.7.1.tar.gz
+wget https://downloads.cisofy.com/lynis/lynis-3.1.0.tar.gz
+tar xvzf lynis-3.1.0.tar.gz
 mv lynis /usr/local/
 ln -s /usr/local/lynis/lynis /usr/bin/lynis
 lynis audit system
 
 
 # Print install summary
-cd $HOMEDIR
-echo "==== EWF Affiliate Node Install Summary ====" > install-summary.txt
-echo "Company: $COMPANY_NAME" >> install-summary.txt
-echo "Validator Address: $ADDR" >> install-summary.txt
-echo "Enode: $ENODE" >> install-summary.txt
-echo "IP Address: $EXTERNAL_IP" >> install-summary.txt
-echo "InfluxDB Username: $INFLUX_USER" >> install-summary.txt
-echo "InfluxDB Password: $INFLUX_PASS" >> install-summary.txt
+cd "$HOMEDIR" || exit 1
+{
+  echo "==== EWF Affiliate Node Install Summary ===="
+  echo "Company: ${COMPANY_NAME}"
+  echo "Validator Address: ${ADDR}"
+  echo "Enode: ${ENODE}"
+  echo "IP Address: ${EXTERNAL_IP}"
+  echo "InfluxDB Username: ${INFLUX_USER}"
+  echo "InfluxDB Password: ${INFLUX_PASS}"
+} > install-summary.txt
 cat install-summary.txt
-
 
 # END OF MAIN
 }
@@ -448,9 +449,9 @@ cat > configs/energyweb.cfg << EOF
   },
   "Sync": {
     "FastSync": true,
-    "PivotNumber": 23850000,
-    "PivotHash": "0xc5d6f496e929f6bdda9bbb08c6cef82f5aac1ae536afa1c8c09b53c42d8bebda",
-    "PivotTotalDifficulty": "8115734451064382353601484387247671842865272564",
+    "PivotNumber": 26940000,
+    "PivotHash": "0x8835983de9578a4355313afd2a43d8eada6f2a4ddbd9c51da103e0d5f53c4d8b",
+    "PivotTotalDifficulty": "9167206964850082205703311924211835616257898274",
     "FastBlocks" : true,
     "UseGethLimitsInFastBlocks" : false,
     "FastSyncCatchUpHeightDelta": 10000000000
@@ -483,6 +484,12 @@ cat > configs/energyweb.cfg << EOF
   },
   "Aura": {
     "ForceSealing": true
+  },
+  "Mining": {
+    "MinGasPrice": 1
+  },
+  "Merge": {
+    "Enabled": false
   }
 }
 EOF
