@@ -17,6 +17,7 @@ TELEGRAF_CHKSUM="9857e82aaac65660afb9eaf93384fadc0fc5c108077e67ab12d0ed8e5c64492
 
 # Chain/Nethermind configuration
 export CHAINNAME="volta"
+
 BLOCK_GAS="8000000"
 CHAINSPEC_URL="https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/Volta.json"
 NLOG_CONFIG="https://raw.githubusercontent.com/NethermindEth/nethermind/master/src/Nethermind/Nethermind.Runner/NLog.config"
@@ -163,11 +164,9 @@ mkdir logs
 mkdir keystore
 
 echo "Fetch Chainspec..."
-# TODO: replace with chainspec location
 wget $CHAINSPEC_URL -O chainspec/volta.json
 
 echo "Creating Account..."
-
 # Generate random account password and store
 XPATH="$(pwd)"
 PASSWORD="$(openssl rand -hex 32)"
@@ -196,7 +195,6 @@ echo "Account created: $ADDR"
 INFLUX_USER=${ADDR:2} # cutting 0x prefix
 INFLUX_PASS="$(openssl rand -hex 16)"
 
-
 # got the key now discard of the nethermind instance
 docker stop nethermind
 docker rm -f nethermind
@@ -204,9 +202,11 @@ docker rm -f nethermind
 writeNethermindConfig
 NETHERMIND_KEY_FILE=$(find ./keystore/ -maxdepth 1 -type f -name 'UTC*' -printf '%T@ %p\n' | sort -n | tail -n1 | awk '{print $NF}')
 
-# Prepare nethermind telemetry pipe
-mkfifo /var/spool/nethermind.sock
-chown telegraf /var/spool/nethermind.sock
+# Prepare Nethermind telemetry pipe
+if [ ! -e /var/spool/nethermind.sock ]; then
+    mkfifo /var/spool/nethermind.sock
+    chown telegraf /var/spool/nethermind.sock
+fi
 
 # Write NLog config file
 wget $NLOG_CONFIG -O NLog.config
@@ -219,7 +219,6 @@ writeDockerCompose
 docker-compose up -d
 
 # Collect the enode from nethermind over RPC
-
 echo "Waiting 15 sec for nethermind to come up and generate the enode..."
 sleep 15
 ENODE=$(curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data '{ "method": "net_localEnode", "params": [], "id": 1, "jsonrpc": "2.0" }' | jq -r '.result')
@@ -229,7 +228,6 @@ writeTelegrafConfig
 service telegraf restart
 
 echo "Setting up firewall"
-
 systemctl enable iptables
 
 # non-docker services
@@ -249,36 +247,43 @@ iptables -A INPUT -i lo -j ACCEPT
 iptables -A INPUT -j FILTERS
 iptables -P INPUT DROP
 
-iptables -A DOCKER-USER -i $NETIF -j FILTERS
+iptables -A DOCKER-USER -i "$NETIF" -j FILTERS
 iptables -A DOCKER-USER -j RETURN
 service iptables save
 
-# run automated post-install audit
-cd /opt/
-wget https://downloads.cisofy.com/lynis/lynis-2.7.1.tar.gz
-tar xvzf lynis-2.7.1.tar.gz
-mv lynis /usr/local/
-ln -s /usr/local/lynis/lynis /usr/bin/lynis
+# Run automated post-install audit
+if command -v lynis &> /dev/null; then
+    echo "Lynis is already installed, skipping installation."
+else
+    echo "Lynis not found, proceeding with installation."
+
+    cd /opt/ || { echo "Failed to change directory to /opt/"; exit 1; }
+    wget https://downloads.cisofy.com/lynis/lynis-3.1.0.tar.gz
+    tar xvzf lynis-3.1.0.tar.gz
+    mv lynis /usr/local/
+    ln -s /usr/local/lynis/lynis /usr/bin/lynis
+    echo "Lynis installation completed."
+fi
+echo "Running Lynis audit..."
 lynis audit system
 
-
 # Print install summary
-cd $HOMEDIR
-echo "==== EWF Affiliate Node Install Summary ====" > install-summary.txt
-echo "Company: $COMPANY_NAME" >> install-summary.txt
-echo "Validator Address: $ADDR" >> install-summary.txt
-echo "Enode: $ENODE" >> install-summary.txt
-echo "IP Address: $EXTERNAL_IP" >> install-summary.txt
-echo "InfluxDB Username: $INFLUX_USER" >> install-summary.txt
-echo "InfluxDB Password: $INFLUX_PASS" >> install-summary.txt
+cd "$HOMEDIR" || exit 1
+{
+  echo "==== EWF Affiliate Node Install Summary ===="
+  echo "Company: ${COMPANY_NAME}"
+  echo "Validator Address: ${ADDR}"
+  echo "Enode: ${ENODE}"
+  echo "IP Address: ${EXTERNAL_IP}"
+  echo "InfluxDB Username: ${INFLUX_USER}"
+  echo "InfluxDB Password: ${INFLUX_PASS}"
+} > install-summary.txt
 cat install-summary.txt
-
 
 # END OF MAIN
 }
 
 ## Files that get created
-
 writeDockerCompose() {
 cat > docker-compose.yml << 'EOF'
 version: '3.5'
