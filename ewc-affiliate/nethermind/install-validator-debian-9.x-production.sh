@@ -233,6 +233,7 @@ docker-compose up -d
 echo "Waiting 45 sec for nethermind to come up and generate the enode..."
 sleep 45
 ENODE=$(curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data '{ "method": "net_localEnode", "params": [], "id": 1, "jsonrpc": "2.0" }' | jq -r '.result')
+
 # Now all information is complete to write the telegraf file
 writeTelegrafConfig
 service telegraf restart
