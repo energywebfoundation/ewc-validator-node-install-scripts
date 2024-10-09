@@ -47,10 +47,10 @@ HOMEDIR=$(pwd)
 # Confirm user home directory
 whiptail --backtitle="EWF Genesis Node Installer" --title "Confirm Home Directory" --yesno "Is $(pwd) the normal users home directory?" 8 60
 
-COMPANY_NAME=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Affiliate/Company Name (will be cut to 30 chars)" 8 78 $COMPANY_NAME --title "Node Configuration" 3>&1 1>&2 2>&3)
-KEY_SEED=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Validator account seed (32byte hex with 0x)" 8 78 $KEY_SEED --title "Node Configuration" 3>&1 1>&2 2>&3)
-EXTERNAL_IP=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts public IP" 8 78 $EXTERNAL_IP --title "Connectivity" 3>&1 1>&2 2>&3)
-NETIF=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts primary network interface" 8 78 $NETIF --title "Connectivity" 3>&1 1>&2 2>&3)
+COMPANY_NAME=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Affiliate/Company Name (will be cut to 30 chars)" 8 78 "$COMPANY_NAME" --title "Node Configuration" 3>&1 1>&2 2>&3)
+KEY_SEED=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Validator account seed (32byte hex with 0x)" 8 78 "$KEY_SEED" --title "Node Configuration" 3>&1 1>&2 2>&3)
+EXTERNAL_IP=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts public IP" 8 78 "$EXTERNAL_IP" --title "Connectivity" 3>&1 1>&2 2>&3)
+NETIF=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts primary network interface" 8 78 "$NETIF" --title "Connectivity" 3>&1 1>&2 2>&3)
 fi
 
 COMPANY_NAME=$(echo $COMPANY_NAME | cut -c -30)
@@ -99,7 +99,7 @@ wget https://dl.influxdata.com/telegraf/releases/telegraf-$TELEGRAF_VERSION-1.x8
 TG_CHK="$(sha256sum telegraf-$TELEGRAF_VERSION-1.x86_64.rpm)"
 if [ "$TELEGRAF_CHKSUM" != "$TG_CHK" ]; then
   echo "ERROR: Unable to verify telegraf package. Checksum missmatch."
-  exit -1;
+  exit 1;
 fi
 
 yum -y localinstall telegraf-$TELEGRAF_VERSION-1.x86_64.rpm
@@ -125,14 +125,14 @@ docker pull $PARITY_VERSION
 IMGHASH="$(docker image inspect $PARITY_VERSION|jq -r '.[0].Id')"
 if [ "$PARITY_CHKSUM" != "$IMGHASH" ]; then
   echo "ERROR: Unable to verify parity docker image. Checksum missmatch."
-  exit -1;
+  exit 1;
 fi
 
 docker pull energyweb/parity-telemetry:$PARITYTELEMETRY_VERSION
 IMGHASH="$(docker image inspect energyweb/parity-telemetry:$PARITYTELEMETRY_VERSION|jq -r '.[0].Id')"
 if [ "$PARITYTELEMETRY_CHKSUM" != "$IMGHASH" ]; then
   echo "ERROR: Unable to verify parity-telemetry docker image. Checksum missmatch."
-  exit -1;
+  exit 1;
 fi
 
 # Create the directory structure
@@ -169,8 +169,8 @@ chown 1000:1000 .secret
 # Launch oneshot docker
 docker run -d --name parity-keygen \
     -p 127.0.0.1:8545:8545 \
-    -v ${XPATH}/chain-data/:/home/openethereum/.local/share/io.parity.ethereum/ \
-    -v ${XPATH}/config:/parity/config:ro ${PARITY_VERSION} \
+    -v "${XPATH}"/chain-data/:/home/openethereum/.local/share/io.parity.ethereum/ \
+    -v "${XPATH}"/config:/parity/config:ro ${PARITY_VERSION} \
     --config /parity/config/parity-non-signing.toml --jsonrpc-apis=parity_accounts
 
 # Wait for parity to sort itself out
@@ -183,10 +183,10 @@ cat << EOF
 EOF
 }
 # Send request to create account from seed
-ADDR=`curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data "$(generate_account_data)" | jq -r '.result'`
+ADDR=$(curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data "$(generate_account_data)" | jq -r '.result')
 
 echo "Account created: $ADDR"
-INFLUX_USER="$(echo $ADDR | cut -c -20)"
+INFLUX_USER="$(echo "$ADDR" | cut -c -20)"
 INFLUX_PASS="$(openssl rand -hex 16)"
 
 # got the key now discard of the parity instance
@@ -218,7 +218,7 @@ docker-compose up -d
 # Collect the enode from parity over RPC
 echo "Waiting 30 sec for parity to come up and generate the enode..."
 sleep 30
-ENODE=`curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data '{ "method": "parity_enode", "params": [], "id": 1, "jsonrpc": "2.0" }' | jq -r '.result'`
+ENODE=$(curl -s --request POST --url http://localhost:8545/ --header 'content-type: application/json' --data '{ "method": "parity_enode", "params": [], "id": 1, "jsonrpc": "2.0" }' | jq -r '.result')
 
 # Now all information is complete to write the telegraf file
 writeTelegrafConfig
@@ -245,13 +245,13 @@ iptables -A INPUT -i lo -j ACCEPT
 iptables -A INPUT -j FILTERS
 iptables -P INPUT DROP
 
-iptables -A DOCKER-USER -i $NETIF -j FILTERS
+iptables -A DOCKER-USER -i "$NETIF" -j FILTERS
 iptables -A DOCKER-USER -j RETURN
 service iptables save
 
 # run automated post-install audit
 cd /opt/
-wget https://downloads.cisofy.com/lynis/lynis-2.7.1.tar.gz
+wget https://downloads.cisofy.com/lynis/lynis-3.1.0.tar.gz
 tar xvzf lynis-2.7.1.tar.gz
 mv lynis /usr/local/
 ln -s /usr/local/lynis/lynis /usr/local/bin/lynis
@@ -259,16 +259,17 @@ ln -s /usr/local/lynis/lynis /usr/local/bin/lynis
 
 
 # Print install summary
-cd $HOMEDIR
-echo "==== EWF Affiliate Node Install Summary ====" > install-summary.txt
-echo "Company: $COMPANY_NAME" >> install-summary.txt
-echo "Validator Address: $ADDR" >> install-summary.txt
-echo "Enode: $ENODE" >> install-summary.txt
-echo "IP Address: $EXTERNAL_IP" >> install-summary.txt
-echo "InfluxDB Username: $INFLUX_USER" >> install-summary.txt
-echo "InfluxDB Password: $INFLUX_PASS" >> install-summary.txt
+cd "$HOMEDIR" || exit 1
+{
+  echo "==== EWF Affiliate Node Install Summary ===="
+  echo "Company: ${COMPANY_NAME}"
+  echo "Validator Address: ${ADDR}"
+  echo "Enode: ${ENODE}"
+  echo "IP Address: ${EXTERNAL_IP}"
+  echo "InfluxDB Username: ${INFLUX_USER}"
+  echo "InfluxDB Password: ${INFLUX_PASS}"
+} > install-summary.txt
 cat install-summary.txt
-
 
 # END OF MAIN
 }
