@@ -57,7 +57,7 @@ HOMEDIR=$(pwd)
 whiptail --backtitle="EWF Genesis Node Installer" --title "Confirm Home Directory" --yesno "Is $(pwd) the normal users home directory?" 8 60
 
 until [[ -n "$COMPANY_NAME" ]]; do
-	      COMPANY_NAME=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Affiliate/Company Name (will be cut to 30 chars)" 8 78 $COMPANY_NAME --title "Node Configuration" 3>&1 1>&2 2>&3)
+	      COMPANY_NAME=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter Affiliate/Company Name (will be cut to 30 chars)" 8 78 "$COMPANY_NAME" --title "Node Configuration" 3>&1 1>&2 2>&3)
         exitstatus=$?
         if [[ $exitstatus = 0 ]]; then
                 echo "Affiliate/Company name has been set to: " "$COMPANY_NAME"
@@ -67,8 +67,8 @@ until [[ -n "$COMPANY_NAME" ]]; do
         fi
 done
 
-EXTERNAL_IP=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts public IP" 8 78 $EXTERNAL_IP --title "Connectivity" 3>&1 1>&2 2>&3)
-NETIF=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts primary network interface" 8 78 $NETIF --title "Connectivity" 3>&1 1>&2 2>&3)
+EXTERNAL_IP=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts public IP" 8 78 "$EXTERNAL_IP" --title "Connectivity" 3>&1 1>&2 2>&3)
+NETIF=$(whiptail --backtitle="EWF Genesis Node Installer" --inputbox "Enter this hosts primary network interface" 8 78 "$NETIF" --title "Connectivity" 3>&1 1>&2 2>&3)
 fi
 
 COMPANY_NAME=$(echo "$COMPANY_NAME" | cut -c -30)
