@@ -251,7 +251,7 @@ service iptables save
 
 # run automated post-install audit
 cd /opt/
-wget https://downloads.cisofy.com/lynis/lynis-3.1.0.tar.gz
+wget https://downloads.cisofy.com/lynis/lynis-3.1.4.tar.gz
 tar xvzf lynis-2.7.1.tar.gz
 mv lynis /usr/local/
 ln -s /usr/local/lynis/lynis /usr/local/bin/lynis

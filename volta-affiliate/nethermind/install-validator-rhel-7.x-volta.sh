@@ -6,8 +6,8 @@ set -o errexit
 export DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.25.4"
-NETHERMIND_CHKSUM="sha256:ca1dbaf99121965397294f225ebb0c1100925cce42a5ce38961e4fd9383e1539"
+export NETHERMIND_VERSION="nethermind/nethermind:1.31.10"
+NETHERMIND_CHKSUM="sha256:d712e23680e85734360bfead30ac5a5ea374cce84cd75c526a7dab20891e79bb"
 
 export NETHERMINDTELEMETRY_VERSION="1.0.1"
 NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
@@ -25,11 +25,115 @@ NLOG_CONFIG="https://raw.githubusercontent.com/NethermindEth/nethermind/master/s
 # Try to guess the current primary network interface
 NETIF="$(ip route | grep default | awk '{print $5}')"
 
+# Detect OS information
+if [ -f /etc/os-release ]; then
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    OS_NAME=$ID
+    OS_VERSION_ID=$VERSION_ID
+    OS_MAJOR_VERSION=$(echo "$VERSION_ID" | cut -d. -f1)
+elif [ -f /etc/redhat-release ]; then
+    OS_NAME="rhel"
+    OS_MAJOR_VERSION=$(grep -oE '[0-9]+\.[0-9]+' /etc/redhat-release | cut -d. -f1)
+    OS_VERSION_ID="$OS_MAJOR_VERSION"
+else
+    echo "Unsupported OS. This script is designed for RHEL/CentOS."
+    exit 1
+fi
+
+echo "Detected OS: $OS_NAME $OS_VERSION_ID"
+
 # Install system updates and required tools and dependencies
 echo "Installing updates"
-rpm -qa | grep -qw epel-release || yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-yum -y update
-yum -y install iptables-services jq curl expect wget bind-utils policycoreutils-python firewalld openssl
+
+# Install EPEL repository based on OS version
+install_epel() {
+    case "$OS_NAME" in
+        rhel|centos)
+            if ! rpm -qa | grep -qw epel-release; then
+                echo "Installing EPEL repository for $OS_NAME $OS_MAJOR_VERSION"
+                if [ "$OS_MAJOR_VERSION" -eq "7" ]; then
+                    yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+                elif [ "$OS_MAJOR_VERSION" -eq "8" ]; then
+                    yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+                elif [ "$OS_MAJOR_VERSION" -eq "9" ]; then
+                    yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+                else
+                    echo "Unsupported $OS_NAME version. This script supports versions 7, 8, and 9."
+                    exit 1
+                fi
+            else
+                echo "EPEL repository already installed"
+            fi
+            ;;
+        *)
+            echo "Unsupported OS: $OS_NAME. This script requires RHEL or CentOS."
+            exit 1
+            ;;
+    esac
+}
+
+# Install required packages based on OS version
+install_dependencies() {
+    echo "Installing dependencies for $OS_NAME $OS_MAJOR_VERSION"
+    yum -y update
+
+    # Install packages one by one to avoid failures if a single package is missing
+    yum -y install iptables-services || echo "Failed to install iptables-services"
+    yum -y install jq || echo "Failed to install jq"
+    yum -y install curl || echo "Failed to install curl"
+    yum -y install expect || echo "Failed to install expect"
+    yum -y install wget || echo "Failed to install wget"
+    yum -y install bind-utils || echo "Failed to install bind-utils"
+    yum -y install firewalld || echo "Failed to install firewalld"
+    yum -y install openssl || echo "Failed to install openssl"
+
+    # Version-specific packages
+    if [ "$OS_MAJOR_VERSION" -eq "7" ]; then
+        yum -y install policycoreutils-python || echo "Failed to install policycoreutils-python"
+    else
+        # For RHEL/CentOS 8 or 9
+        yum -y install policycoreutils-python-utils || true
+        # Fallback if the above fails
+        if ! command -v semanage &> /dev/null; then
+            echo "policycoreutils-python-utils not available, trying alternative packages"
+            yum -y install policycoreutils || echo "Failed to install policycoreutils"
+        fi
+    fi
+}
+
+# Install Docker based on OS version
+install_docker() {
+    echo "Installing Docker CE for $OS_NAME $OS_MAJOR_VERSION"
+    yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+    if [ "$OS_MAJOR_VERSION" -eq "7" ]; then
+        yum-config-manager --setopt="docker-ce-stable.baseurl=https://download.docker.com/linux/centos/7/x86_64/stable" --save
+        yum-config-manager --add-repo=http://mirror.centos.org/centos/7/extras/x86_64/
+        rpm --import https://www.centos.org/keys/RPM-GPG-KEY-CentOS-7
+    elif [ "$OS_MAJOR_VERSION" -eq "8" ]; then
+        yum-config-manager --setopt="docker-ce-stable.baseurl=https://download.docker.com/linux/centos/8/x86_64/stable" --save
+        dnf -y install https://download.docker.com/linux/centos/8/x86_64/stable/Packages/containerd.io-1.6.9-3.1.el8.x86_64.rpm || true
+    elif [ "$OS_MAJOR_VERSION" -eq "9" ]; then
+        yum-config-manager --setopt="docker-ce-stable.baseurl=https://download.docker.com/linux/centos/9/x86_64/stable" --save
+    fi
+
+    yum -y install docker-ce
+}
+
+ensure_clean_directory() {
+  local dir=$1
+  if [ -d "$dir" ]; then
+    echo "Directory $dir already exists. Cleaning up..."
+    rm -rf "$dir"
+  fi
+  mkdir -p "$dir"
+  echo "Created fresh directory: $dir"
+}
+
+# Run installations
+install_epel
+install_dependencies
 
 systemctl disable firewalld
 systemctl stop firewalld
@@ -93,11 +197,7 @@ chmod 755 /etc/dhclient-enter-hooks
 
 # Install Docker CE
 echo "Install Docker..."
-yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-yum-config-manager --setopt="docker-ce-stable.baseurl=https://download.docker.com/linux/centos/7/x86_64/stable" --save
-yum-config-manager --add-repo=http://mirror.centos.org/centos/7/extras/x86_64/
-rpm --import https://www.centos.org/keys/RPM-GPG-KEY-CentOS-7
-yum -y install container-selinux docker-ce
+install_docker
 
 # Write docker config
 writeDockerConfig
@@ -106,7 +206,7 @@ systemctl restart docker
 
 # Install docker-compose
 echo "install compose"
-curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
+curl -L "https://github.com/docker/compose/releases/download/v2.36.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
 chmod +x /usr/bin/docker-compose
 
 # Install the Telegrad telemetry collector
@@ -154,15 +254,16 @@ if [ "$NETHERMINDTELEMETRY_CHKSUM" != "$IMGHASH" ]; then
   exit 1;
 fi
 
-# Create the directory structure
-mkdir docker-stack
+# Replace the directory creation section with this:
+echo "Setting up directory structure..."
+ensure_clean_directory docker-stack
 chmod 750 docker-stack
 cd docker-stack
-mkdir chainspec
-mkdir database
-mkdir configs
-mkdir logs
-mkdir keystore
+ensure_clean_directory chainspec
+ensure_clean_directory database
+ensure_clean_directory configs
+ensure_clean_directory logs
+ensure_clean_directory keystore
 
 echo "Fetch Chainspec..."
 wget $CHAINSPEC_URL -O chainspec/volta.json
@@ -259,8 +360,8 @@ else
     echo "Lynis not found, proceeding with installation."
 
     cd /opt/ || { echo "Failed to change directory to /opt/"; exit 1; }
-    wget https://downloads.cisofy.com/lynis/lynis-3.1.0.tar.gz
-    tar xvzf lynis-3.1.0.tar.gz
+    wget https://downloads.cisofy.com/lynis/lynis-3.1.4.tar.gz
+    tar xvzf lynis-3.1.4.tar.gz
     mv lynis /usr/local/
     ln -s /usr/local/lynis/lynis /usr/bin/lynis
     echo "Lynis installation completed."
