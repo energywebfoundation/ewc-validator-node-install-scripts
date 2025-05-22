@@ -174,9 +174,15 @@ chmod 400 .secret
 chown 1000:1000 .secret
 mv .secret keystore/.secret
 
+# shellcheck disable=SC2102
 docker run -d --network host --name nethermind \
     -v "${XPATH}"/keystore/:/nethermind/keystore \
-    ${NETHERMIND_VERSION} --config ${CHAINNAME} --Init.EnableUnsecuredDevWallet true --JsonRpc.Enabled true
+    ${NETHERMIND_VERSION} --config ${CHAINNAME} --KeyStore.KeyStoreDirectory=/nethermind/keystore \
+  --KeyStore.Passwords=/nethermind/keystore/.secret \
+  --JsonRpc.EnabledModules=[Eth,Net,Web3,Personal] \
+  --JsonRpc.Host=0.0.0.0 \
+  --JsonRpc.Port=8545 \
+  --JsonRpc.Enabled=true
 
 generate_account_data()
 {
