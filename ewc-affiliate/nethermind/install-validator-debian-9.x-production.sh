@@ -6,8 +6,8 @@ set -o errexit
 export DEBIAN_FRONTEND=noninteractive
 
 # Configuration Block - Docker checksums are the image Id
-export NETHERMIND_VERSION="nethermind/nethermind:1.25.4"
-NETHERMIND_CHKSUM="sha256:ca1dbaf99121965397294f225ebb0c1100925cce42a5ce38961e4fd9383e1539"
+export NETHERMIND_VERSION="nethermind/nethermind:1.31.10"
+NETHERMIND_CHKSUM="sha256:d712e23680e85734360bfead30ac5a5ea374cce84cd75c526a7dab20891e79bb"
 
 export NETHERMINDTELEMETRY_VERSION="1.0.1"
 NETHERMINDTELEMETRY_CHKSUM="sha256:1aa2fc9200acdd7762984416b634077522e5f1198efef141c0bbdb112141bf6d"
@@ -186,9 +186,15 @@ chmod 400 .secret
 chown 1000:1000 .secret
 mv .secret keystore/.secret
 
+# shellcheck disable=SC2102
 docker run -d --network host --name nethermind \
     -v "${XPATH}"/keystore/:/nethermind/keystore \
-    ${NETHERMIND_VERSION} --config ${CHAINNAME} --Init.EnableUnsecuredDevWallet true --JsonRpc.Enabled true
+    ${NETHERMIND_VERSION} --config ${CHAINNAME} --KeyStore.KeyStoreDirectory=/nethermind/keystore \
+  --KeyStore.Passwords=/nethermind/keystore/.secret \
+  --JsonRpc.EnabledModules=[Eth,Net,Web3,Personal] \
+  --JsonRpc.Host=0.0.0.0 \
+  --JsonRpc.Port=8545 \
+  --JsonRpc.Enabled=true
 
 generate_account_data()
 {
@@ -268,8 +274,8 @@ else
     echo "Lynis not found, proceeding with installation."
 
     cd /opt/ || { echo "Failed to change directory to /opt/"; exit 1; }
-    wget https://downloads.cisofy.com/lynis/lynis-3.1.0.tar.gz
-    tar xvzf lynis-3.1.0.tar.gz
+    wget https://downloads.cisofy.com/lynis/lynis-3.1.4.tar.gz
+    tar xvzf lynis-3.1.4.tar.gz
     mv lynis /usr/local/
     ln -s /usr/local/lynis/lynis /usr/bin/lynis
     echo "Lynis installation completed."
